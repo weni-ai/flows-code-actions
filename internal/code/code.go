@@ -9,7 +9,7 @@ import (
 type CodeType string
 
 const (
-	TypeUser     CodeType = "user"
+	TypeFlow     CodeType = "flow"
 	TypeEndpoint CodeType = "endpoint"
 )
 
@@ -36,17 +36,17 @@ type UseCase interface {
 
 func NewCodeAction(name, source string, codeType CodeType, url string, projectUUID string) *Code {
 	switch codeType {
-	case TypeUser:
-		return NewUserCode(name, source, projectUUID)
+	case TypeFlow:
+		return NewFlowCode(name, source, projectUUID)
 	case TypeEndpoint:
 		return NewEndpointCode(name, source, url, projectUUID)
 	}
 	return nil
 }
 
-func NewUserCode(name string, source string, projectUUID string) *Code {
+func NewFlowCode(name string, source string, projectUUID string) *Code {
 	return &Code{
-		Name: name, Type: TypeUser, Source: source, ProjectUUID: projectUUID,
+		Name: name, Type: TypeFlow, Source: source, ProjectUUID: projectUUID,
 	}
 }
 
@@ -58,7 +58,7 @@ func NewEndpointCode(name string, source string, url string, projectUUID string)
 
 func (t *CodeType) Validate() error {
 	switch *t {
-	case TypeUser:
+	case TypeFlow:
 		return nil
 	case TypeEndpoint:
 		return nil

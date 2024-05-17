@@ -25,13 +25,13 @@ func (r *codeRepo) Create(ctx context.Context, code *code.Code) (*code.Code, err
 	code.ID = primitive.NewObjectID().Hex()
 	code.CreatedAt = time.Now()
 	code.UpdatedAt = time.Now()
-	_, err := r.collection.InsertOne(context.Background(), code)
+	_, err := r.collection.InsertOne(ctx, code)
 	return code, err
 }
 
 func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 	codeAction := &code.Code{}
-	err := r.collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(codeAction)
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(codeAction)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
@@ -40,13 +40,13 @@ func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 
 func (r *codeRepo) ListByProjectUUID(ctx context.Context, projectUUID string) ([]code.Code, error) {
 	codes := []code.Code{}
-	c, err := r.collection.Find(context.Background(), bson.M{"project_uuid": projectUUID})
+	c, err := r.collection.Find(ctx, bson.M{"project_uuid": projectUUID})
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close(context.Background())
+	defer c.Close(ctx)
 
-	for c.Next(context.Background()) {
+	for c.Next(ctx) {
 		var code code.Code
 		if err := c.Decode(&code); err != nil {
 			return nil, err
@@ -63,11 +63,11 @@ func (r *codeRepo) ListByProjectUUID(ctx context.Context, projectUUID string) ([
 
 func (r *codeRepo) Update(ctx context.Context, id string, codeAction *code.Code) (*code.Code, error) {
 	codeAction.UpdatedAt = time.Now()
-	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": codeAction})
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": codeAction})
 	return codeAction, err
 }
 
 func (r *codeRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.collection.DeleteOne(context.Background(), bson.M{"_id": id})
+	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }

@@ -44,12 +44,12 @@ func (h *CodeRunHandler) Find(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	codeAction, err := h.codeRunService.ListByCodeID(ctx, codeID)
+	codeRuns, err := h.codeRunService.ListByCodeID(ctx, codeID)
 	if err != nil {
-		if codeAction == nil {
+		if codeRuns == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, codeAction)
+	return c.JSON(http.StatusOK, codeRuns)
 }
