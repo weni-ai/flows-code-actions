@@ -3,6 +3,8 @@ package routes
 import (
 	"github.com/weni-ai/code-actions/internal/code"
 	codeRepoMongo "github.com/weni-ai/code-actions/internal/code/mongodb"
+	"github.com/weni-ai/code-actions/internal/codelog"
+	codelogRepoMongo "github.com/weni-ai/code-actions/internal/codelog/mongodb"
 	"github.com/weni-ai/code-actions/internal/coderun"
 	coderunRepoMongo "github.com/weni-ai/code-actions/internal/coderun/mongodb"
 	s "github.com/weni-ai/code-actions/internal/http/echo"
@@ -22,6 +24,10 @@ func Setup(server *s.Server) {
 	coderunService := coderun.NewCodeRunService(coderunRepo)
 	coderunHandler := handlers.NewCodeRunHandler(coderunService)
 
+	codelogRepo := codelogRepoMongo.NewCodeLogRepository(server.DB)
+	codelogService := codelog.NewCodeLogService(codelogRepo)
+	codelogHandler := handlers.NewCodeLogHandler(codelogService)
+
 	server.Echo.Use(middleware.Logger())
 
 	server.Echo.GET("/health", healthHandler.Health)
@@ -34,4 +40,7 @@ func Setup(server *s.Server) {
 
 	server.Echo.GET("/coderun/:id", coderunHandler.Get)
 	server.Echo.GET("/coderun", coderunHandler.Find)
+
+	server.Echo.GET("/codelog/:id", codelogHandler.Get)
+	server.Echo.GET("/codelog", codelogHandler.Find)
 }
