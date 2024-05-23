@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/weni-ai/code-actions/config"
+	"github.com/weni-ai/flows-code-actions/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 func GetMongoDatabase(cf *config.Config) (*mongo.Database, error) {
@@ -21,7 +20,7 @@ func GetMongoDatabase(cf *config.Config) (*mongo.Database, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error on connect to mongo")
 	}
-	if err := mongoClient.Ping(context.TODO(), readpref.Primary()); err != nil {
+	if err := mongoClient.Ping(ctx, nil); err != nil {
 		return nil, errors.Wrap(err, "mongodb fail to ping")
 	} else {
 		slog.Info("mongodb OK")

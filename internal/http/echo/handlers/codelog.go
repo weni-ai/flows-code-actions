@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/weni-ai/code-actions/internal/codelog"
+	"github.com/weni-ai/flows-code-actions/internal/codelog"
 )
 
 type CodeLogHandler struct {

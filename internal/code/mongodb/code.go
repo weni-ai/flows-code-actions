@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/weni-ai/code-actions/internal/code"
+	"github.com/weni-ai/flows-code-actions/internal/code"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

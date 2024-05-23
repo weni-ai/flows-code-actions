@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	serverHttp "github.com/weni-ai/code-actions/internal/http/echo"
+	serverHttp "github.com/weni-ai/flows-code-actions/internal/http/echo"
 
 	"github.com/labstack/echo/v4"
 )

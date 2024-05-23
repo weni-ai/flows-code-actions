@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/weni-ai/code-actions/config"
+	"github.com/weni-ai/flows-code-actions/config"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/labstack/echo/v4"

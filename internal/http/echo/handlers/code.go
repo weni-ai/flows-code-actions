@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/weni-ai/code-actions/internal/code"
+	"github.com/weni-ai/flows-code-actions/internal/code"
 )
 
 type CodeHandler struct {
@@ -17,6 +17,7 @@ type CodeHandler struct {
 type CreateCodeActionRequest struct {
 	Name        string `json:"name,omitempty"`
 	Source      string `json:"source,omitempty"`
+	Language    string `json:"language,omitempty"`
 	Type        string `json:"type,omitempty"`
 	ProjectUUID string `json:"project_uuid,omitempty"`
 	URL         string `json:"url,omitempty"`
@@ -27,6 +28,7 @@ type CreateCodeActionResponse struct {
 
 	Name        string `json:"name,omitempty"`
 	Source      string `json:"source,omitempty"`
+	Language    string `json:"language,omitempty"`
 	Type        string `json:"type,omitempty"`
 	ProjectUUID string `json:"project_uuid,omitempty"`
 	URL         string `json:"url,omitempty"`
@@ -46,6 +48,7 @@ type SaveCodeActionResponse struct {
 
 	Name        string `json:"name,omitempty"`
 	Source      string `json:"source,omitempty"`
+	Language    string `json:"language,omitempty"`
 	Type        string `json:"type,omitempty"`
 	ProjectUUID string `json:"project_uuid,omitempty"`
 	URL         string `json:"url,omitempty"`
@@ -70,23 +73,30 @@ func (h *CodeHandler) Create(c echo.Context) error {
 	if err := t.Validate(); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	code := code.NewCodeAction(ca.Name, ca.Source, code.CodeType(ca.Type), ca.URL, ca.ProjectUUID)
-	code, err := h.codeService.Create(ctx, code)
+	lang := code.LanguageType(ca.Language)
+	if err := lang.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	newCode, err := h.codeService.Create(
+		ctx,
+		code.NewCodeAction(ca.Name, ca.Source, lang, t, ca.URL, ca.ProjectUUID))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	response := CreateCodeActionResponse{
-		ID: code.ID,
+		ID: newCode.ID,
 
-		Name:        code.Name,
-		Source:      code.Source,
-		Type:        string(code.Type),
-		URL:         code.URL,
-		ProjectUUID: code.ProjectUUID,
+		Name:        newCode.Name,
+		Source:      newCode.Source,
+		Language:    string(newCode.Language),
+		Type:        string(newCode.Type),
+		URL:         newCode.URL,
+		ProjectUUID: newCode.ProjectUUID,
 
-		CreatedAt: code.CreatedAt.Format(time.DateTime),
-		UpdatedAt: code.UpdatedAt.Format(time.DateTime),
+		CreatedAt: newCode.CreatedAt.Format(time.DateTime),
+		UpdatedAt: newCode.UpdatedAt.Format(time.DateTime),
 	}
 	return c.JSON(http.StatusCreated, response)
 }
@@ -140,21 +150,22 @@ func (h *CodeHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	code, err := h.codeService.Update(ctx, codeID, sca.Name, sca.Source, sca.Type)
+	cd, err := h.codeService.Update(ctx, codeID, sca.Name, sca.Source, sca.Type)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to save code").Error())
 	}
 
 	response := CreateCodeActionResponse{
-		ID: code.ID,
+		ID: cd.ID,
 
-		Name:   code.Name,
-		Source: code.Source,
-		Type:   string(code.Type),
-		URL:    code.URL,
+		Name:     cd.Name,
+		Source:   cd.Source,
+		Language: string(cd.Language),
+		Type:     string(cd.Type),
+		URL:      cd.URL,
 
-		CreatedAt: code.CreatedAt.Format(time.DateTime),
-		UpdatedAt: code.UpdatedAt.Format(time.DateTime),
+		CreatedAt: cd.CreatedAt.Format(time.DateTime),
+		UpdatedAt: cd.UpdatedAt.Format(time.DateTime),
 	}
 	return c.JSON(http.StatusOK, response)
 }
@@ -172,9 +183,4 @@ func (h *CodeHandler) Delete(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.NoContent(http.StatusOK)
-}
-
-func (h *CodeHandler) RunCode(c echo.Context) error {
-	// TODO: implement
-	return echo.NewHTTPError(http.StatusInternalServerError, "Not Implemented")
 }

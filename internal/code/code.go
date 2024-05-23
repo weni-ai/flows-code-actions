@@ -7,20 +7,26 @@ import (
 )
 
 type CodeType string
+type LanguageType string
 
 const (
 	TypeFlow     CodeType = "flow"
 	TypeEndpoint CodeType = "endpoint"
+
+	TypePy LanguageType = "py"
+	TypeGo LanguageType = "go"
+	TypeJS LanguageType = "js"
 )
 
 type Code struct {
 	ID string `bson:"_id,omitempty" json:"id,omitempty"`
 
-	Name        string   `bson:"name" json:"name"`
-	Type        CodeType `bson:"type" json:"type"`
-	Source      string   `bson:"source" json:"source"`
-	URL         string   `bson:"url" json:"url"`
-	ProjectUUID string   `bson:"project_uuid" json:"project_uuid"`
+	Name        string       `bson:"name" json:"name"`
+	Type        CodeType     `bson:"type" json:"type"`
+	Source      string       `bson:"source" json:"source"`
+	Language    LanguageType `bson:"language" json:"language"`
+	URL         string       `bson:"url" json:"url"`
+	ProjectUUID string       `bson:"project_uuid" json:"project_uuid"`
 
 	CreatedAt time.Time `bson:"creted_at" json:"creted_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
@@ -34,25 +40,25 @@ type UseCase interface {
 	Delete(ctx context.Context, codeID string) error
 }
 
-func NewCodeAction(name, source string, codeType CodeType, url string, projectUUID string) *Code {
+func NewCodeAction(name, source string, language LanguageType, codeType CodeType, url string, projectUUID string) *Code {
 	switch codeType {
 	case TypeFlow:
-		return NewFlowCode(name, source, projectUUID)
+		return NewFlowCode(name, source, language, projectUUID)
 	case TypeEndpoint:
-		return NewEndpointCode(name, source, url, projectUUID)
+		return NewEndpointCode(name, source, language, url, projectUUID)
 	}
 	return nil
 }
 
-func NewFlowCode(name string, source string, projectUUID string) *Code {
+func NewFlowCode(name string, source string, language LanguageType, projectUUID string) *Code {
 	return &Code{
-		Name: name, Type: TypeFlow, Source: source, ProjectUUID: projectUUID,
+		Name: name, Type: TypeFlow, Source: source, ProjectUUID: projectUUID, Language: language,
 	}
 }
 
-func NewEndpointCode(name string, source string, url string, projectUUID string) *Code {
+func NewEndpointCode(name string, source string, language LanguageType, url string, projectUUID string) *Code {
 	return &Code{
-		Name: name, Type: TypeEndpoint, Source: source, URL: url, ProjectUUID: projectUUID,
+		Name: name, Type: TypeEndpoint, Source: source, URL: url, ProjectUUID: projectUUID, Language: language,
 	}
 }
 
@@ -63,5 +69,18 @@ func (t *CodeType) Validate() error {
 	case TypeEndpoint:
 		return nil
 	}
-	return fmt.Errorf("Code type of %v is not valid", t)
+	return fmt.Errorf("code type of %v is not valid", t)
+}
+
+func (lang *LanguageType) Validate() error {
+
+	switch *lang {
+	case TypePy:
+		return nil
+	case TypeJS:
+		return nil
+	case TypeGo:
+		return nil
+	}
+	return fmt.Errorf("language type %v is not valid", lang)
 }

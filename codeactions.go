@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/weni-ai/code-actions/config"
-	server "github.com/weni-ai/code-actions/internal/http/echo"
-	"github.com/weni-ai/code-actions/internal/http/echo/routes"
-	"github.com/weni-ai/code-actions/pkg/db"
+	"github.com/weni-ai/flows-code-actions/config"
+	server "github.com/weni-ai/flows-code-actions/internal/http/echo"
+	"github.com/weni-ai/flows-code-actions/internal/http/echo/routes"
+	"github.com/weni-ai/flows-code-actions/pkg/db"
 )
 
 func Start(cfg *config.Config) {
