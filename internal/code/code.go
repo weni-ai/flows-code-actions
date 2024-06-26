@@ -13,9 +13,9 @@ const (
 	TypeFlow     CodeType = "flow"
 	TypeEndpoint CodeType = "endpoint"
 
-	TypePy LanguageType = "py"
+	TypePy LanguageType = "python"
 	TypeGo LanguageType = "go"
-	TypeJS LanguageType = "js"
+	TypeJS LanguageType = "javascript"
 )
 
 type Code struct {
@@ -35,7 +35,7 @@ type Code struct {
 type UseCase interface {
 	Create(ctx context.Context, code *Code) (*Code, error)
 	GetByID(ctx context.Context, id string) (*Code, error)
-	ListProjectCodes(ctx context.Context, projectUUID string) ([]Code, error)
+	ListProjectCodes(ctx context.Context, projectUUID string, codeType string) ([]Code, error)
 	Update(ctx context.Context, id string, name string, source string, codeType string) (*Code, error)
 	Delete(ctx context.Context, codeID string) error
 }
@@ -69,7 +69,7 @@ func (t *CodeType) Validate() error {
 	case TypeEndpoint:
 		return nil
 	}
-	return fmt.Errorf("code type of %v is not valid", t)
+	return fmt.Errorf(`code type of (%s) is not valid`, string(*t))
 }
 
 func (lang *LanguageType) Validate() error {
@@ -82,5 +82,5 @@ func (lang *LanguageType) Validate() error {
 	case TypeGo:
 		return nil
 	}
-	return fmt.Errorf("language type %v is not valid", lang)
+	return fmt.Errorf(`language type (%s) is not valid`, string(*lang))
 }

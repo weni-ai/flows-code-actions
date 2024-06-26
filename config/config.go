@@ -30,20 +30,20 @@ func NewConfig() *Config {
 
 func LoadHTTPConfig() HTTPConfig {
 	return HTTPConfig{
-		Host: Getenv("CODE_ACTIONS_HOST", ":"),
-		Port: Getenv("CODE_ACTIONS_PORT", "8000"),
+		Host: Getenv("FLOWS_CODE_ACTIONS_HOST", ":"),
+		Port: Getenv("FLOWS_CODE_ACTIONS_PORT", "8050"),
 	}
 }
 
 func LoadDBConfig() DBConfig {
 	timeout, _ := strconv.ParseInt(
-		Getenv("CODE_ACTIONS_MONGO_DB_TIMEOUT", "15"), 10, 64)
+		Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "15"), 10, 64)
 	if timeout == 0 {
 		timeout = 15
 	}
 	return DBConfig{
-		URI:     Getenv("CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
-		Name:    Getenv("CODE_ACTIONS_MONGO_DB_NAME", "code-actions"),
+		URI:     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
+		Name:    Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions"),
 		Timeout: timeout,
 	}
 }

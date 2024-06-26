@@ -1,7 +1,11 @@
 package coderunner
 
-import "context"
+import (
+	"context"
+
+	"github.com/weni-ai/flows-code-actions/internal/coderun"
+)
 
 type UseCase interface {
-	RunCode(ctx context.Context, code string, language string) (string, error)
+	RunCode(ctx context.Context, codeID string, code string, language string) (*coderun.CodeRun, error)
 }

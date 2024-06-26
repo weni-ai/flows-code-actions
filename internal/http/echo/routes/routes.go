@@ -29,7 +29,7 @@ func Setup(server *s.Server) {
 	codelogService := codelog.NewCodeLogService(codelogRepo)
 	codelogHandler := handlers.NewCodeLogHandler(codelogService)
 
-	coderunnerService := coderunner.NewCodeRunnerService()
+	coderunnerService := coderunner.NewCodeRunnerService(coderunService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
 
 	server.Echo.Use(middleware.Logger())
@@ -49,5 +49,5 @@ func Setup(server *s.Server) {
 	server.Echo.GET("/codelog", codelogHandler.Find)
 
 	server.Echo.POST("/run/:code_id", coderunnerHandler.RunCode)
-	server.Echo.POST("/webhook/:code_id", coderunnerHandler.RunWebhook)
+	server.Echo.POST("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
 }

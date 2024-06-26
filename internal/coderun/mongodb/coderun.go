@@ -29,12 +29,12 @@ func (r *codeRunRepo) Create(ctx context.Context, coderun *coderun.CodeRun) (*co
 }
 
 func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun, error) {
-	codeAction := &coderun.CodeRun{}
-	err := r.collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(codeAction)
+	codeRun := &coderun.CodeRun{}
+	err := r.collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(codeRun)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, errors.New("coderun not found")
 	}
-	return codeAction, err
+	return codeRun, err
 }
 
 func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string) ([]coderun.CodeRun, error) {
@@ -60,10 +60,10 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string) ([]coderu
 	return codes, err
 }
 
-func (r *codeRunRepo) Update(ctx context.Context, id string, codeAction *coderun.CodeRun) error {
-	codeAction.UpdatedAt = time.Now()
-	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": codeAction})
-	return err
+func (r *codeRunRepo) Update(ctx context.Context, id string, codeRun *coderun.CodeRun) (*coderun.CodeRun, error) {
+	codeRun.UpdatedAt = time.Now()
+	_, err := r.collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": codeRun})
+	return codeRun, err
 }
 
 func (r *codeRunRepo) Delete(ctx context.Context, id string) error {

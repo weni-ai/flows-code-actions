@@ -24,7 +24,7 @@ func NewCodeRunnerHandler(codeService code.UseCase, coderunnerService coderunner
 }
 
 func (h *CodeRunnerHandler) RunCode(c echo.Context) error {
-	codeID := c.Param("id")
+	codeID := c.Param("code_id")
 	if codeID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
 	}
@@ -34,21 +34,26 @@ func (h *CodeRunnerHandler) RunCode(c echo.Context) error {
 	codeAction, err := h.codeService.GetByID(ctx, codeID)
 	if err != nil {
 		if codeAction == nil {
-			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+			return echo.NewHTTPError(http.StatusNotFound, "code not found")
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := h.coderunnerService.RunCode(ctx, codeAction.Source, string(codeAction.Language))
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language))
 	if err != nil {
-		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, result)
+	runResult := map[string]interface{}{
+		"code_id": codeID,
+		"result":  result,
+	}
+
+	return c.JSON(http.StatusOK, runResult)
 }
 
-func (h *CodeRunnerHandler) RunWebhook(c echo.Context) error {
-	codeID := c.Param("id")
+func (h *CodeRunnerHandler) RunEndpoint(c echo.Context) error {
+	codeID := c.Param("code_id")
 	if codeID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required"))
 	}
@@ -63,7 +68,7 @@ func (h *CodeRunnerHandler) RunWebhook(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := h.coderunnerService.RunCode(ctx, codeAction.Source, string(codeAction.Language))
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language))
 	if err != nil {
 		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

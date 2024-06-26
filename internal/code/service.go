@@ -20,8 +20,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Code, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) ListProjectCodes(ctx context.Context, projectUUID string) ([]Code, error) {
-	return s.repo.ListByProjectUUID(ctx, projectUUID)
+func (s *Service) ListProjectCodes(ctx context.Context, projectUUID string, codeType string) ([]Code, error) {
+	return s.repo.ListByProjectUUID(ctx, projectUUID, codeType)
 }
 
 func (s *Service) Update(ctx context.Context, id string, name string, source string, codeType string) (*Code, error) {

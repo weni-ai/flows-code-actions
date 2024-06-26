@@ -8,10 +8,10 @@ import (
 type CodeRunStatus string
 
 const (
-	queued    CodeRunStatus = "queued"
-	started   CodeRunStatus = "started"
-	completed CodeRunStatus = "completed"
-	failed    CodeRunStatus = "failed"
+	StatusQueued    CodeRunStatus = "queued"
+	StatusStarted   CodeRunStatus = "started"
+	StatusCompleted CodeRunStatus = "completed"
+	StatusFailed    CodeRunStatus = "failed"
 )
 
 type CodeRun struct {
@@ -29,6 +29,7 @@ type UseCase interface {
 	Create(ctx context.Context, codeRun *CodeRun) (*CodeRun, error)
 	GetByID(ctx context.Context, id string) (*CodeRun, error)
 	ListByCodeID(ctx context.Context, codeID string) ([]CodeRun, error)
+	Update(ctx context.Context, codeRunID string, codeRun *CodeRun) (*CodeRun, error)
 	Delete(ctx context.Context, id string) error
 }
 

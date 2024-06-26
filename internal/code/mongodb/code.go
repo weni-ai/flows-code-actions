@@ -38,9 +38,17 @@ func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 	return codeAction, err
 }
 
-func (r *codeRepo) ListByProjectUUID(ctx context.Context, projectUUID string) ([]code.Code, error) {
+func (r *codeRepo) ListByProjectUUID(ctx context.Context, projectUUID string, codeType string) ([]code.Code, error) {
 	codes := []code.Code{}
-	c, err := r.collection.Find(ctx, bson.M{"project_uuid": projectUUID})
+	filter := bson.M{"project_uuid": projectUUID}
+	if codeType != "" {
+		ct := code.CodeType(codeType)
+		if err := ct.Validate(); err != nil {
+			return nil, err
+		}
+		filter["type"] = codeType
+	}
+	c, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

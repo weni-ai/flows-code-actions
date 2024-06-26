@@ -24,6 +24,10 @@ func (s *Service) ListByCodeID(ctx context.Context, codeID string) ([]CodeRun, e
 	return s.repo.ListByCodeID(ctx, codeID)
 }
 
+func (s *Service) Update(ctx context.Context, id string, codeRun *CodeRun) (*CodeRun, error) {
+	return s.repo.Update(ctx, id, codeRun)
+}
+
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }

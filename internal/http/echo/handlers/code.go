@@ -124,10 +124,12 @@ func (h *CodeHandler) Find(c echo.Context) error {
 	if projectUUID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid project_uuid is required").Error())
 	}
+	codeType := c.QueryParam("code_type")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	codeAction, err := h.codeService.ListProjectCodes(ctx, projectUUID)
+	codeAction, err := h.codeService.ListProjectCodes(ctx, projectUUID, codeType)
 	if err != nil {
 		if codeAction == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
