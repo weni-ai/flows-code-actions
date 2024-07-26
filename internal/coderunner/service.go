@@ -44,12 +44,12 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 	if err != nil {
 		newCodeRun.Status = coderun.StatusFailed
 		newCodeRun.Result = errors.Wrap(err, "error on executing code").Error()
-		return s.codeRun.Update(ctx, codeID, newCodeRun)
+		return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
 	}
 
 	newCodeRun.Result = result
 	newCodeRun.Status = coderun.StatusCompleted
-	return s.codeRun.Update(ctx, codeID, newCodeRun)
+	return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
 }
 
 func runPython(ctx context.Context, code string) (string, error) {

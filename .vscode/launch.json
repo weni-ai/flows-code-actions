@@ -9,7 +9,12 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/codeactions/main.go"
+      "program": "${workspaceFolder}/cmd/codeactions/main.go",
+      "env": {
+        "FLOWS_CODE_ACTIONS_OIDC_REALM": "flows_dev_local",
+        "FLOWS_CODE_ACTIONS_OIDC_HOST": "http://localhost:7080",
+        "FLOWS_CODE_ACTIONS_AUTH_TOKEN": ""
+      }
     }
   ]
 }

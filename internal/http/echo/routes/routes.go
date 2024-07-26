@@ -36,18 +36,18 @@ func Setup(server *s.Server) {
 
 	server.Echo.GET("/health", healthHandler.Health)
 
-	server.Echo.POST("/code", codeHandler.Create)
-	server.Echo.GET("/code", codeHandler.Find)
-	server.Echo.GET("/code/:id", codeHandler.Get)
-	server.Echo.PATCH("/code/:id", codeHandler.Update)
-	server.Echo.DELETE("/code/:id", codeHandler.Delete)
+	server.Echo.POST("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Create))
+	server.Echo.GET("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Find))
+	server.Echo.GET("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Get))
+	server.Echo.PATCH("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Update))
+	server.Echo.DELETE("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Delete))
 
-	server.Echo.GET("/coderun/:id", coderunHandler.Get)
-	server.Echo.GET("/coderun", coderunHandler.Find)
+	server.Echo.GET("/coderun/:id", handlers.ProtectEndpointWithAuthToken(server.Config, coderunHandler.Get))
+	server.Echo.GET("/coderun", handlers.ProtectEndpointWithAuthToken(server.Config, coderunHandler.Find))
 
-	server.Echo.GET("/codelog/:id", codelogHandler.Get)
-	server.Echo.GET("/codelog", codelogHandler.Find)
+	server.Echo.GET("/codelog/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codelogHandler.Get))
+	server.Echo.GET("/codelog", handlers.ProtectEndpointWithAuthToken(server.Config, codelogHandler.Find))
 
-	server.Echo.POST("/run/:code_id", coderunnerHandler.RunCode)
-	server.Echo.POST("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
+	server.Echo.POST("/run/:code_id", handlers.RequireAuthToken(server.Config, coderunnerHandler.RunCode))
+	server.Echo.Any("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
 }

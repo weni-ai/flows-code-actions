@@ -73,5 +73,5 @@ func (h *CodeRunnerHandler) RunEndpoint(c echo.Context) error {
 		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, result)
+	return c.String(http.StatusOK, result.Result)
 }

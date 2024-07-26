@@ -2,7 +2,10 @@ package code
 
 import (
 	"context"
+	"errors"
 )
+
+const maxSourecBytes = 1024 * 1024
 
 type Service struct {
 	repo Repository
@@ -13,6 +16,9 @@ func NewCodeService(repo Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
+	if len(code.Source) >= maxSourecBytes {
+		return nil, errors.New("source code is too big")
+	}
 	return s.repo.Create(ctx, code)
 }
 

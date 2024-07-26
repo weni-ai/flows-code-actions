@@ -6,8 +6,10 @@ import (
 )
 
 type Config struct {
-	HTTP HTTPConfig
-	DB   DBConfig
+	HTTP      HTTPConfig
+	DB        DBConfig
+	OIDC      *OIDCConfig
+	AuthToken string
 }
 
 type HTTPConfig struct {
@@ -21,10 +23,18 @@ type DBConfig struct {
 	Timeout int64
 }
 
+type OIDCConfig struct {
+	AuthEnabled bool
+	Realm       string
+	Host        string
+}
+
 func NewConfig() *Config {
 	return &Config{
-		HTTP: LoadHTTPConfig(),
-		DB:   LoadDBConfig(),
+		HTTP:      LoadHTTPConfig(),
+		DB:        LoadDBConfig(),
+		OIDC:      LoadOIDCConfig(),
+		AuthToken: Getenv("FLOWS_CODE_ACTIONS_AUTH_TOKEN", ""),
 	}
 }
 
@@ -45,6 +55,20 @@ func LoadDBConfig() DBConfig {
 		URI:     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
 		Name:    Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions"),
 		Timeout: timeout,
+	}
+}
+
+func LoadOIDCConfig() *OIDCConfig {
+	Realm := Getenv("FLOWS_CODE_ACTIONS_OIDC_REALM", "")
+	Host := Getenv("FLOWS_CODE_ACTIONS_OIDC_HOST", "")
+	Enabled, _ := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_OIDC_HOST", "false"))
+	if Realm == "" || Host == "" {
+		return nil
+	}
+	return &OIDCConfig{
+		Realm:       Realm,
+		Host:        Host,
+		AuthEnabled: Enabled,
 	}
 }
 
