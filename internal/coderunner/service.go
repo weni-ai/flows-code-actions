@@ -12,15 +12,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
 )
 
 type Service struct {
 	codeRun *coderun.Service
+	codeLog *codelog.Service
 }
 
-func NewCodeRunnerService(coderun *coderun.Service) *Service {
-	return &Service{codeRun: coderun}
+func NewCodeRunnerService(coderun *coderun.Service, codelog *codelog.Service) *Service {
+	return &Service{codeRun: coderun, codeLog: codelog}
 }
 
 func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string) (*coderun.CodeRun, error) {
@@ -42,13 +44,27 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 		return nil, errors.New("unsupported language code type")
 	}
 	if err != nil {
+
 		newCodeRun.Status = coderun.StatusFailed
 		newCodeRun.Result = errors.Wrap(err, "error on executing code").Error()
+
+		newCodeLog := codelog.NewCodeLog(newCodeRun.ID, newCodeRun.CodeID, codelog.TypeError, newCodeRun.Result)
+		_, lerr := s.codeLog.Create(ctx, newCodeLog)
+		if lerr != nil {
+			return nil, errors.Wrap(lerr, "create code log failed")
+		}
+
 		return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
 	}
 
 	newCodeRun.Result = result
 	newCodeRun.Status = coderun.StatusCompleted
+
+	newCodeLog := codelog.NewCodeLog(newCodeRun.ID, newCodeRun.CodeID, codelog.TypeDebug, newCodeRun.Result)
+	_, lerr := s.codeLog.Create(ctx, newCodeLog)
+	if lerr != nil {
+		return nil, errors.Wrap(lerr, "create code log failed")
+	}
 	return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
 }
 

@@ -29,7 +29,7 @@ func Setup(server *s.Server) {
 	codelogService := codelog.NewCodeLogService(codelogRepo)
 	codelogHandler := handlers.NewCodeLogHandler(codelogService)
 
-	coderunnerService := coderunner.NewCodeRunnerService(coderunService)
+	coderunnerService := coderunner.NewCodeRunnerService(coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
 
 	server.Echo.Use(middleware.Logger())
