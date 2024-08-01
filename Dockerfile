@@ -10,9 +10,11 @@ COPY . .
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     --mount=type=bind,target=. \
-    go install -v codeactions.go
+    go install -v ./cmd/codeactions/main.go
 
 FROM alpine:3.18.4
+
+RUN apk add --no-cache python3 py3-pip
 
 ENV APP_USER=app \
     APP_GROUP=app \
@@ -30,4 +32,4 @@ WORKDIR /app
 USER ${APP_USER}:${APP_GROUP}
 
 EXPOSE 8080
-CMD ["./codeactions"]
+CMD ["./main"]
