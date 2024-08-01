@@ -34,6 +34,7 @@ func Setup(server *s.Server) {
 
 	server.Echo.Use(middleware.Logger())
 
+	server.Echo.GET("/", healthHandler.Health)
 	server.Echo.GET("/health", healthHandler.Health)
 
 	server.Echo.POST("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Create))

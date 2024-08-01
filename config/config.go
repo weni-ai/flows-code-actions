@@ -8,7 +8,7 @@ import (
 type Config struct {
 	HTTP      HTTPConfig
 	DB        DBConfig
-	OIDC      *OIDCConfig
+	OIDC      OIDCConfig
 	AuthToken string
 }
 
@@ -58,14 +58,14 @@ func LoadDBConfig() DBConfig {
 	}
 }
 
-func LoadOIDCConfig() *OIDCConfig {
+func LoadOIDCConfig() OIDCConfig {
 	Realm := Getenv("FLOWS_CODE_ACTIONS_OIDC_REALM", "")
 	Host := Getenv("FLOWS_CODE_ACTIONS_OIDC_HOST", "")
-	Enabled, _ := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_OIDC_HOST", "false"))
-	if Realm == "" || Host == "" {
-		return nil
+	Enabled, err := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_OIDC_AUTH_ENABLED", "false"))
+	if err != nil {
+		Enabled = false
 	}
-	return &OIDCConfig{
+	return OIDCConfig{
 		Realm:       Realm,
 		Host:        Host,
 		AuthEnabled: Enabled,
