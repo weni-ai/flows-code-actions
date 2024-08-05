@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -74,4 +76,37 @@ func (h *CodeRunnerHandler) RunEndpoint(c echo.Context) error {
 	}
 
 	return c.String(http.StatusOK, result.Result)
+}
+
+func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
+	codeID := c.Param("code_id")
+	if codeID == "" {
+		return echo.NewHTTPError(http.StatusNotFound, errors.New("Not Found"))
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	codeAction, err := h.codeService.GetByID(ctx, codeID)
+	if err != nil {
+		if codeAction == nil || codeAction.Type == code.TypeFlow {
+			return echo.NewHTTPError(http.StatusNotFound, errors.New("Not Found"))
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	qparams := c.QueryParams()
+	log.Println(qparams)
+
+	abody, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	log.Println(string(abody))
+
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language))
+	if err != nil {
+		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	log.Println(result)
+	return c.NoContent(200)
 }

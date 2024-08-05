@@ -51,4 +51,6 @@ func Setup(server *s.Server) {
 
 	server.Echo.POST("/run/:code_id", handlers.RequireAuthToken(server.Config, coderunnerHandler.RunCode))
 	server.Echo.Any("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
+
+	server.Echo.Any("/action/endpoint/:code_id", coderunnerHandler.ActionEndpoint)
 }

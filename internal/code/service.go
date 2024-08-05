@@ -2,7 +2,13 @@ package code
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"os/exec"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const maxSourecBytes = 1024 * 1024
@@ -19,6 +25,17 @@ func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 	if len(code.Source) >= maxSourecBytes {
 		return nil, errors.New("source code is too big")
 	}
+
+	if code.Language == TypePy {
+		externalLibs := extractPythonLibs(code.Source)
+		if len(externalLibs) > 0 {
+			err := installPythonLibs(externalLibs)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return s.repo.Create(ctx, code)
 }
 
@@ -57,4 +74,54 @@ func (s *Service) Update(ctx context.Context, id string, name string, source str
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func extractPythonLibs(pythonCode string) []string {
+	standardLibraries := []string{"base64", "datetime", "json", "math", "os", "random", "re", "sys"}
+	re := regexp.MustCompile(`^(from|import)\s+([\w.]+)`)
+
+	var libraries []string
+	for _, line := range strings.Split(pythonCode, "\n") {
+		matches := re.FindStringSubmatch(line)
+		if len(matches) > 2 {
+			library := strings.Split(matches[2], ".")[0]
+
+			if !contains(standardLibraries, library) {
+				libraries = append(libraries, library)
+			}
+		}
+	}
+
+	return removeDoubles(libraries)
+}
+
+func installPythonLibs(libs []string) error {
+	for _, lib := range libs {
+		cmd := exec.Command("pip", "install", lib)
+		err := cmd.Run()
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Error on install lib: %s", lib))
+		}
+	}
+	return nil
+}
+
+func contains(s []string, e string) bool {
+	i := sort.SearchStrings(s, e)
+	return i < len(s) && s[i] == e
+}
+
+func removeDoubles(s []string) []string {
+	sort.Strings(s)
+	j := 0
+	for i := 1; i < len(s); i++ {
+		if s[j] != s[i] {
+			j++
+			s[j] = s[i]
+		}
+	}
+	if len(s) > 0 {
+		return s[:j+1]
+	}
+	return s
 }

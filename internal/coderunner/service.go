@@ -35,7 +35,7 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 
 	switch language {
 	case "python":
-		result, err = runPython(ctx, code)
+		result, err = runPythonV2(ctx, newCodeRun.ID, code)
 	case "javascript":
 		result, err = runJs(ctx, code)
 	case "go":
@@ -87,6 +87,43 @@ func runPython(ctx context.Context, code string) (string, error) {
 		return "", fmt.Errorf("error executing code: %s", stderr.String())
 	}
 	return stdout.String(), nil
+}
+
+func runPythonV2(ctx context.Context, coderunID string, code string) (string, error) {
+	tempDir, err := os.MkdirTemp("./", "code-")
+	if err != nil {
+		fmt.Println("Error ao criar diretório temporário:", err)
+		return "", err
+	}
+	defer os.RemoveAll(tempDir)
+
+	currentDir := "/home/rafael/weni/weni-ai/codeactions"
+
+	sourceFile := currentDir + "/engines/py/main.py"
+	destinatinFile := tempDir + "/main.py"
+	data, err := os.ReadFile(sourceFile)
+	if err != nil {
+		return "", errors.Wrap(err, "Error on reading main file")
+	}
+	err = os.WriteFile(destinatinFile, data, 0644)
+	if err != nil {
+		return "", errors.Wrap(err, "Error on copy main file")
+	}
+
+	newFile := tempDir + "/action.py"
+	err = os.WriteFile(newFile, []byte("Conteúdo do novo arquivo"), 0644)
+	if err != nil {
+		return "", errors.Wrap(err, "Erro ao criar o novo arquivo")
+	}
+
+	cmd := exec.Command("ls", tempDir)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", errors.Wrap(err, "Erro ao listar o diretório")
+
+	}
+	fmt.Println(string(output))
+	return "", nil
 }
 
 func runJs(ctx context.Context, code string) (string, error) {
