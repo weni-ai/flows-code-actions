@@ -23,10 +23,10 @@ class Result:
         self._db = db
         self._runId = runId
     def set(self, value):
-        self._result = value
+        self._result = str(value)
         self.save()
     def save(self):
-        result = db["coderun"].update_one({"_id": self._runId}, {"$set": {"result": self._result}})
+        result = db["coderun"].update_one({"_id": ObjectId(self._runId)}, {"$set": {"result": self._result}})
         if result.modified_count == 1:
             print("result saved!")
         
@@ -49,13 +49,15 @@ def main():
     params_dict = {}
     for arg in args.arg:
         key, value = arg.split('===')
+        key = key.strip()
+        value = value.strip()
         params_dict[key] = value
 
     for key, value in params_dict.items():
         print(f"{key}={value}")
         
-    body = args.body
-    run_id = args.run
+    body = args.body.strip()
+    run_id = args.run.strip()
     
     engine = Engine(params=Params(params_dict), body=body, result=Result(db=db, runId = run_id))
     action.Run(engine)

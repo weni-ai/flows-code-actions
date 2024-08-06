@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,21 +26,26 @@ func NewCodeRunnerService(coderun *coderun.Service, codelog *codelog.Service) *S
 	return &Service{codeRun: coderun, codeLog: codelog}
 }
 
-func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string) (*coderun.CodeRun, error) {
-	newCodeRun, err := s.codeRun.Create(ctx, coderun.NewCodeRun(codeID, coderun.StatusStarted))
+func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string, params map[string]interface{}, body string) (*coderun.CodeRun, error) {
+	cr := &coderun.CodeRun{
+		CodeID: codeID,
+		Status: coderun.StatusStarted,
+		Params: params,
+		Body:   body,
+	}
+
+	newCodeRun, err := s.codeRun.Create(ctx, cr)
 	if err != nil {
 		return nil, err
 	}
 
-	var result string
-
 	switch language {
 	case "python":
-		result, err = runPythonV2(ctx, newCodeRun.ID, code)
+		_, err = runPythonV2(ctx, newCodeRun.ID.Hex(), code, params, body)
 	case "javascript":
-		result, err = runJs(ctx, code)
+		_, err = runJs(ctx, code)
 	case "go":
-		result, err = runGo(ctx, code)
+		_, err = runGo(ctx, code)
 	default:
 		return nil, errors.New("unsupported language code type")
 	}
@@ -48,24 +54,31 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 		newCodeRun.Status = coderun.StatusFailed
 		newCodeRun.Result = errors.Wrap(err, "error on executing code").Error()
 
-		newCodeLog := codelog.NewCodeLog(newCodeRun.ID, newCodeRun.CodeID, codelog.TypeError, newCodeRun.Result)
+		newCodeLog := codelog.NewCodeLog(newCodeRun.ID.Hex(), newCodeRun.CodeID, codelog.TypeError, newCodeRun.Result)
 		_, lerr := s.codeLog.Create(ctx, newCodeLog)
 		if lerr != nil {
 			return nil, errors.Wrap(lerr, "create code log failed")
 		}
 
-		return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
+		errcoderun, cerr := s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
+		if cerr != nil {
+			return errcoderun, cerr
+		}
+		return errcoderun, errors.Wrap(err, "error on executing code")
 	}
 
-	newCodeRun.Result = result
+	newCodeRun, err = s.codeRun.GetByID(ctx, newCodeRun.ID.Hex())
+	if err != nil {
+		return nil, err
+	}
 	newCodeRun.Status = coderun.StatusCompleted
 
-	newCodeLog := codelog.NewCodeLog(newCodeRun.ID, newCodeRun.CodeID, codelog.TypeDebug, newCodeRun.Result)
+	newCodeLog := codelog.NewCodeLog(newCodeRun.ID.Hex(), newCodeRun.CodeID, codelog.TypeDebug, newCodeRun.Result)
 	_, lerr := s.codeLog.Create(ctx, newCodeLog)
 	if lerr != nil {
 		return nil, errors.Wrap(lerr, "create code log failed")
 	}
-	return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
+	return s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
 }
 
 func runPython(ctx context.Context, code string) (string, error) {
@@ -86,10 +99,13 @@ func runPython(ctx context.Context, code string) (string, error) {
 	if stderr.String() != "" {
 		return "", fmt.Errorf("error executing code: %s", stderr.String())
 	}
+	if stdout.String() != "" {
+		log.Println(stdout.String())
+	}
 	return stdout.String(), nil
 }
 
-func runPythonV2(ctx context.Context, coderunID string, code string) (string, error) {
+func runPythonV2(ctx context.Context, coderunID string, code string, params map[string]interface{}, body string) (string, error) {
 	tempDir, err := os.MkdirTemp("./", "code-")
 	if err != nil {
 		fmt.Println("Error ao criar diretório temporário:", err)
@@ -111,7 +127,7 @@ func runPythonV2(ctx context.Context, coderunID string, code string) (string, er
 	}
 
 	newFile := tempDir + "/action.py"
-	err = os.WriteFile(newFile, []byte("Conteúdo do novo arquivo"), 0644)
+	err = os.WriteFile(newFile, []byte(code), 0644)
 	if err != nil {
 		return "", errors.Wrap(err, "Erro ao criar o novo arquivo")
 	}
@@ -120,10 +136,33 @@ func runPythonV2(ctx context.Context, coderunID string, code string) (string, er
 	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrap(err, "Erro ao listar o diretório")
-
 	}
 	fmt.Println(string(output))
-	return "", nil
+
+	paramsArgs := ""
+	for k, v := range params {
+		paramsArgs += fmt.Sprintf("-a %s===%v", k, v)
+	}
+	bodyArg := fmt.Sprintf("-b %s", body)
+	idRunArg := fmt.Sprintf("-r %s", coderunID)
+
+	cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("process took too long. out: %s, err: %s", stdout.String(), stderr.String())
+		}
+	}
+	if stderr.String() != "" {
+		return "", fmt.Errorf("error executing code: %s", stderr.String())
+	}
+	if stdout.String() != "" {
+		log.Println(stdout.String())
+	}
+	return stdout.String(), nil
 }
 
 func runJs(ctx context.Context, code string) (string, error) {

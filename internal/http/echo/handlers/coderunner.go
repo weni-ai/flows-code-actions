@@ -41,7 +41,7 @@ func (h *CodeRunnerHandler) RunCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language))
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), nil, "")
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -70,7 +70,7 @@ func (h *CodeRunnerHandler) RunEndpoint(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language))
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), nil, "")
 	if err != nil {
 		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -94,8 +94,11 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	qparams := c.QueryParams()
-	log.Println(qparams)
+	cparams := map[string]interface{}{}
+
+	for k, v := range c.QueryParams() {
+		cparams[k] = v[0]
+	}
 
 	abody, err := io.ReadAll(c.Request().Body)
 	if err != nil {
@@ -103,10 +106,10 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 	}
 	log.Println(string(abody))
 
-	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language))
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody))
 	if err != nil {
-		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	log.Println(result)
-	return c.NoContent(200)
+	return c.JSON(http.StatusOK, result.Result)
 }
