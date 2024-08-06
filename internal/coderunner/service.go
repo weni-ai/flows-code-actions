@@ -113,6 +113,7 @@ func runPythonV2(ctx context.Context, coderunID string, code string, params map[
 	}
 	defer os.RemoveAll(tempDir)
 
+	//TODO: figure out how to handle temporary files dir
 	currentDir := "/home/rafael/weni/weni-ai/codeactions"
 
 	sourceFile := currentDir + "/engines/py/main.py"

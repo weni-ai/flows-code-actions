@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/weni-ai/flows-code-actions/internal/code"
 	codeRepoMongo "github.com/weni-ai/flows-code-actions/internal/code/mongodb"
+	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	codelogRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelog/mongodb"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
@@ -18,7 +19,8 @@ func Setup(server *s.Server) {
 	healthHandler := handlers.NewHealthHandler(server)
 
 	codeRepo := codeRepoMongo.NewCodeRepository(server.DB)
-	codeService := code.NewCodeService(codeRepo)
+	codelibRepo := codelibRepoMongo.NewCodeLibRepo(server.DB)
+	codeService := code.NewCodeService(codeRepo, codelibRepo)
 	codeHandler := handlers.NewCodeHandler(codeService)
 
 	coderunRepo := coderunRepoMongo.NewCodeRunRepository(server.DB)

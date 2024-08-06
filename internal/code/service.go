@@ -2,23 +2,22 @@ package code
 
 import (
 	"context"
-	"fmt"
-	"os/exec"
-	"regexp"
-	"sort"
-	"strings"
+	"log"
 
 	"github.com/pkg/errors"
+	"github.com/weni-ai/flows-code-actions/internal/codelib"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const maxSourecBytes = 1024 * 1024
 
 type Service struct {
-	repo Repository
+	repo       Repository
+	libService codelib.UseCase
 }
 
-func NewCodeService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewCodeService(repo Repository, libService codelib.UseCase) *Service {
+	return &Service{repo: repo, libService: libService}
 }
 
 func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
@@ -26,13 +25,32 @@ func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 		return nil, errors.New("source code is too big")
 	}
 
+	// TODO: move this lib management to another place
 	if code.Language == TypePy {
-		externalLibs := extractPythonLibs(code.Source)
+		externalLibs := codelib.ExtractPythonLibs(code.Source)
 		if len(externalLibs) > 0 {
-			err := installPythonLibs(externalLibs)
+			err := codelib.InstallPythonLibs(externalLibs)
 			if err != nil {
 				return nil, err
 			}
+		}
+
+		// TODO: refactor this asap, is much responsibility to this function
+		for _, lib := range externalLibs {
+			codeLang := string(code.Language)
+			libLang := codelib.LanguageType(codeLang)
+			libFound, err := s.libService.Find(ctx, lib, &libLang)
+			if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, err
+			}
+			if libFound == nil {
+				newLib := codelib.NewCodeLib(lib, libLang)
+				s.libService.Create(ctx, newLib)
+				if err != nil {
+					return nil, err
+				}
+			}
+			log.Println(libFound)
 		}
 	}
 
@@ -74,54 +92,4 @@ func (s *Service) Update(ctx context.Context, id string, name string, source str
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
-}
-
-func extractPythonLibs(pythonCode string) []string {
-	standardLibraries := []string{"base64", "datetime", "json", "math", "os", "random", "re", "sys"}
-	re := regexp.MustCompile(`^(from|import)\s+([\w.]+)`)
-
-	var libraries []string
-	for _, line := range strings.Split(pythonCode, "\n") {
-		matches := re.FindStringSubmatch(line)
-		if len(matches) > 2 {
-			library := strings.Split(matches[2], ".")[0]
-
-			if !contains(standardLibraries, library) {
-				libraries = append(libraries, library)
-			}
-		}
-	}
-
-	return removeDoubles(libraries)
-}
-
-func installPythonLibs(libs []string) error {
-	for _, lib := range libs {
-		cmd := exec.Command("pip", "install", lib)
-		err := cmd.Run()
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Error on install lib: %s", lib))
-		}
-	}
-	return nil
-}
-
-func contains(s []string, e string) bool {
-	i := sort.SearchStrings(s, e)
-	return i < len(s) && s[i] == e
-}
-
-func removeDoubles(s []string) []string {
-	sort.Strings(s)
-	j := 0
-	for i := 1; i < len(s); i++ {
-		if s[j] != s[i] {
-			j++
-			s[j] = s[i]
-		}
-	}
-	if len(s) > 0 {
-		return s[:j+1]
-	}
-	return s
 }
