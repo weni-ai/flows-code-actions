@@ -3,6 +3,8 @@ package coderun
 import (
 	"context"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CodeRunStatus string
@@ -15,11 +17,14 @@ const (
 )
 
 type CodeRun struct {
-	ID string `bson:"_id,omitempty" json:"_id,omitempty"`
+	ID primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 
 	CodeID string        `bson:"code_id" json:"code_id"`
 	Status CodeRunStatus `bson:"status" json:"status"`
 	Result string        `bson:"result" json:"result"`
+
+	Params map[string]interface{} `bson:"params" json:"params"`
+	Body   string                 `bson:"body" json:"body"`
 
 	CreatedAt time.Time `bson:"creted_at" json:"creted_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`

@@ -7,5 +7,12 @@ import (
 )
 
 type UseCase interface {
-	RunCode(ctx context.Context, codeID string, code string, language string) (*coderun.CodeRun, error)
+	RunCode(
+		ctx context.Context,
+		codeID string,
+		code string,
+		language string,
+		params map[string]interface{},
+		body string,
+	) (*coderun.CodeRun, error)
 }
