@@ -2,9 +2,9 @@ package mongodb
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,16 +22,23 @@ func NewCodeRepository(db *mongo.Database) code.Repository {
 }
 
 func (r *codeRepo) Create(ctx context.Context, code *code.Code) (*code.Code, error) {
-	code.ID = primitive.NewObjectID().Hex()
 	code.CreatedAt = time.Now()
 	code.UpdatedAt = time.Now()
-	_, err := r.collection.InsertOne(ctx, code)
-	return code, err
+	result, err := r.collection.InsertOne(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	code.ID = result.InsertedID.(primitive.ObjectID)
+	return code, nil
 }
 
 func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 	codeAction := &code.Code{}
-	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(codeAction)
+	codeID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "error on parse id to ObjectID")
+	}
+	err = r.collection.FindOne(ctx, bson.M{"_id": codeID}).Decode(codeAction)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
@@ -71,11 +78,19 @@ func (r *codeRepo) ListByProjectUUID(ctx context.Context, projectUUID string, co
 
 func (r *codeRepo) Update(ctx context.Context, id string, codeAction *code.Code) (*code.Code, error) {
 	codeAction.UpdatedAt = time.Now()
-	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": codeAction})
+	codeID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "error on parse id to ObjectID")
+	}
+	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": codeID}, bson.M{"$set": codeAction})
 	return codeAction, err
 }
 
 func (r *codeRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	codeID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.Wrap(err, "error on parse id to ObjectID")
+	}
+	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": codeID})
 	return err
 }

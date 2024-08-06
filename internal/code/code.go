@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CodeType string
@@ -19,7 +21,7 @@ const (
 )
 
 type Code struct {
-	ID string `bson:"_id,omitempty" json:"id,omitempty"`
+	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 
 	Name        string       `bson:"name" json:"name"`
 	Type        CodeType     `bson:"type" json:"type"`

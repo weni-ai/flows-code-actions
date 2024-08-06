@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -23,7 +24,7 @@ type CreateCodeActionRequest struct {
 	URL         string `json:"url,omitempty"`
 }
 
-type CreateCodeActionResponse struct {
+type CodeActionResponse struct {
 	ID string `json:"id,omitempty"`
 
 	Name        string `json:"name,omitempty"`
@@ -33,8 +34,24 @@ type CreateCodeActionResponse struct {
 	ProjectUUID string `json:"project_uuid,omitempty"`
 	URL         string `json:"url,omitempty"`
 
-	CreatedAt string `json:"created_at,omitempty"`
-	UpdatedAt string `json:"updated_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+}
+
+func ParseCodeToResponse(newCode *code.Code) CodeActionResponse {
+	return CodeActionResponse{
+		ID: newCode.ID.Hex(),
+
+		Name:        newCode.Name,
+		Source:      newCode.Source,
+		Language:    string(newCode.Language),
+		Type:        string(newCode.Type),
+		URL:         newCode.URL,
+		ProjectUUID: newCode.ProjectUUID,
+
+		CreatedAt: newCode.CreatedAt,
+		UpdatedAt: newCode.UpdatedAt,
+	}
 }
 
 type SaveCodeActionRequest struct {
@@ -61,6 +78,42 @@ func NewCodeHandler(service code.UseCase) *CodeHandler {
 	return &CodeHandler{codeService: service}
 }
 
+func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	ca := &code.Code{}
+	qp := c.QueryParams()
+	ca.Name = qp.Get("name")
+	ca.Language = code.LanguageType(qp.Get("language"))
+	ca.Type = code.CodeType(qp.Get("type"))
+	ca.ProjectUUID = qp.Get("project_uuid")
+
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to read body").Error())
+	}
+	ca.Source = string(body)
+
+	t := code.CodeType(ca.Type)
+	if err := t.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	lang := code.LanguageType(ca.Language)
+	if err := lang.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	newCode, err := h.codeService.Create(
+		ctx,
+		code.NewCodeAction(ca.Name, ca.Source, lang, t, ca.URL, ca.ProjectUUID))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, newCode)
+}
+
 func (h *CodeHandler) Create(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -85,19 +138,7 @@ func (h *CodeHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	response := CreateCodeActionResponse{
-		ID: newCode.ID,
-
-		Name:        newCode.Name,
-		Source:      newCode.Source,
-		Language:    string(newCode.Language),
-		Type:        string(newCode.Type),
-		URL:         newCode.URL,
-		ProjectUUID: newCode.ProjectUUID,
-
-		CreatedAt: newCode.CreatedAt.Format(time.DateTime),
-		UpdatedAt: newCode.UpdatedAt.Format(time.DateTime),
-	}
+	response := ParseCodeToResponse(newCode)
 	return c.JSON(http.StatusCreated, response)
 }
 
@@ -116,7 +157,8 @@ func (h *CodeHandler) Get(c echo.Context) error {
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, codeAction)
+	response := ParseCodeToResponse(codeAction)
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *CodeHandler) Find(c echo.Context) error {
@@ -129,14 +171,14 @@ func (h *CodeHandler) Find(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	codeAction, err := h.codeService.ListProjectCodes(ctx, projectUUID, codeType)
+	codeActions, err := h.codeService.ListProjectCodes(ctx, projectUUID, codeType)
 	if err != nil {
-		if codeAction == nil {
+		if codeActions == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, codeAction)
+	return c.JSON(http.StatusOK, codeActions)
 }
 
 func (h *CodeHandler) Update(c echo.Context) error {
@@ -157,18 +199,7 @@ func (h *CodeHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to save code").Error())
 	}
 
-	response := CreateCodeActionResponse{
-		ID: cd.ID,
-
-		Name:     cd.Name,
-		Source:   cd.Source,
-		Language: string(cd.Language),
-		Type:     string(cd.Type),
-		URL:      cd.URL,
-
-		CreatedAt: cd.CreatedAt.Format(time.DateTime),
-		UpdatedAt: cd.UpdatedAt.Format(time.DateTime),
-	}
+	response := ParseCodeToResponse(cd)
 	return c.JSON(http.StatusOK, response)
 }
 
