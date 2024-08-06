@@ -3,6 +3,8 @@ package codelog
 import (
 	"context"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type LogType string
@@ -14,10 +16,10 @@ const (
 )
 
 type CodeLog struct {
-	ID string `bson:"id,omitempty" json:"id,omitempty"`
+	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 
-	RunID  string `bson:"run_id" json:"run_id"`
-	CodeID string `bson:"code_id" json:"code_id"`
+	RunID  primitive.ObjectID `bson:"run_id" json:"run_id"`
+	CodeID primitive.ObjectID `bson:"code_id" json:"code_id"`
 
 	Type    LogType `bson:"type" json:"type"`
 	Content string  `bson:"content" json:"content"`
@@ -35,7 +37,9 @@ type UseCase interface {
 }
 
 func NewCodeLog(runID string, codeID string, logType LogType, content string) *CodeLog {
+	primitiveRunID, _ := primitive.ObjectIDFromHex(runID)
+	primitiveCodeID, _ := primitive.ObjectIDFromHex(codeID)
 	return &CodeLog{
-		RunID: runID, CodeID: codeID, Type: logType, Content: content,
+		RunID: primitiveRunID, CodeID: primitiveCodeID, Type: logType, Content: content,
 	}
 }

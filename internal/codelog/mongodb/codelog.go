@@ -2,9 +2,9 @@ package mongodb
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,16 +21,23 @@ func NewCodeLogRepository(db *mongo.Database) codelog.Repository {
 }
 
 func (r *codelogRepo) Create(ctx context.Context, codelog *codelog.CodeLog) (*codelog.CodeLog, error) {
-	codelog.ID = primitive.NewObjectID().Hex()
 	codelog.CreatedAt = time.Now()
 	codelog.UpdatedAt = time.Now()
-	_, err := r.collection.InsertOne(ctx, codelog)
+	result, err := r.collection.InsertOne(ctx, codelog)
+	if err != nil {
+		return nil, err
+	}
+	codelog.ID = result.InsertedID.(primitive.ObjectID)
 	return codelog, err
 }
 
 func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog, error) {
 	log := &codelog.CodeLog{}
-	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(log)
+	codelogID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse id to ObjectID")
+	}
+	err = r.collection.FindOne(ctx, bson.M{"_id": codelogID}).Decode(log)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
@@ -39,7 +46,11 @@ func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog,
 
 func (r *codelogRepo) ListRunLogs(ctx context.Context, runID string) ([]codelog.CodeLog, error) {
 	logs := []codelog.CodeLog{}
-	c, err := r.collection.Find(ctx, bson.M{"run_id": runID})
+	pRunID, err := primitive.ObjectIDFromHex(runID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse runID to ObjectID")
+	}
+	c, err := r.collection.Find(ctx, bson.M{"run_id": pRunID})
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +73,11 @@ func (r *codelogRepo) ListRunLogs(ctx context.Context, runID string) ([]codelog.
 
 func (r *codelogRepo) Update(ctx context.Context, id string, content string) (*codelog.CodeLog, error) {
 	log := &codelog.CodeLog{}
-	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(log)
+	codelogID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse id to ObjectID")
+	}
+	err = r.collection.FindOne(ctx, bson.M{"_id": codelogID}).Decode(log)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
@@ -73,6 +88,10 @@ func (r *codelogRepo) Update(ctx context.Context, id string, content string) (*c
 }
 
 func (r *codelogRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	codelogID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse id to ObjectID")
+	}
+	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": codelogID})
 	return err
 }
