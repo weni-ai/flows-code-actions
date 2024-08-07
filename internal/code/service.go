@@ -2,7 +2,6 @@ package code
 
 import (
 	"context"
-	"log"
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
@@ -45,12 +44,11 @@ func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 			}
 			if libFound == nil {
 				newLib := codelib.NewCodeLib(lib, libLang)
-				s.libService.Create(ctx, newLib)
+				_, err := s.libService.Create(ctx, newLib)
 				if err != nil {
 					return nil, err
 				}
 			}
-			log.Println(libFound)
 		}
 	}
 

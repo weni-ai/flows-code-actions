@@ -15,6 +15,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 FROM alpine:3.18.4
 
 RUN apk add --no-cache python3 py3-pip
+RUN pip install pymongo
 
 ENV APP_USER=app \
     APP_GROUP=app \
@@ -28,6 +29,8 @@ RUN addgroup --system --gid ${GROUP_ID} ${APP_GROUP} \
 COPY --from=builder --chown=${APP_USER}:${APP_GROUP} /go/bin /app
 
 WORKDIR /app
+
+COPY ./engines ./engines
 
 USER ${APP_USER}:${APP_GROUP}
 

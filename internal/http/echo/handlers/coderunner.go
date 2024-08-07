@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -104,12 +103,10 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	log.Println(string(abody))
 
 	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	log.Println(result)
 	return c.JSON(http.StatusOK, result.Result)
 }

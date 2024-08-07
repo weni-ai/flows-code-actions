@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	HTTP      HTTPConfig
-	DB        DBConfig
-	OIDC      OIDCConfig
-	AuthToken string
+	HTTP        HTTPConfig
+	DB          DBConfig
+	OIDC        OIDCConfig
+	AuthToken   string
+	Environment string
 }
 
 type HTTPConfig struct {
@@ -31,10 +32,11 @@ type OIDCConfig struct {
 
 func NewConfig() *Config {
 	return &Config{
-		HTTP:      LoadHTTPConfig(),
-		DB:        LoadDBConfig(),
-		OIDC:      LoadOIDCConfig(),
-		AuthToken: Getenv("FLOWS_CODE_ACTIONS_AUTH_TOKEN", ""),
+		HTTP:        LoadHTTPConfig(),
+		DB:          LoadDBConfig(),
+		OIDC:        LoadOIDCConfig(),
+		AuthToken:   Getenv("FLOWS_CODE_ACTIONS_AUTH_TOKEN", ""),
+		Environment: Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local"),
 	}
 }
 

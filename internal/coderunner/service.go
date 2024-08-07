@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
 )
@@ -41,7 +42,7 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 
 	switch language {
 	case "python":
-		_, err = runPythonV2(ctx, newCodeRun.ID.Hex(), code, params, body)
+		_, err = runPython(ctx, newCodeRun.ID.Hex(), code, params, body)
 	case "javascript":
 		_, err = runJs(ctx, code)
 	case "go":
@@ -50,16 +51,8 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 		return nil, errors.New("unsupported language code type")
 	}
 	if err != nil {
-
 		newCodeRun.Status = coderun.StatusFailed
 		newCodeRun.Result = errors.Wrap(err, "error on executing code").Error()
-
-		newCodeLog := codelog.NewCodeLog(newCodeRun.ID.Hex(), newCodeRun.CodeID, codelog.TypeError, newCodeRun.Result)
-		_, lerr := s.codeLog.Create(ctx, newCodeLog)
-		if lerr != nil {
-			return nil, errors.Wrap(lerr, "create code log failed")
-		}
-
 		errcoderun, cerr := s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
 		if cerr != nil {
 			return errcoderun, cerr
@@ -72,50 +65,28 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 		return nil, err
 	}
 	newCodeRun.Status = coderun.StatusCompleted
-
-	newCodeLog := codelog.NewCodeLog(newCodeRun.ID.Hex(), newCodeRun.CodeID, codelog.TypeDebug, newCodeRun.Result)
-	_, lerr := s.codeLog.Create(ctx, newCodeLog)
-	if lerr != nil {
-		return nil, errors.Wrap(lerr, "create code log failed")
-	}
 	return s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
 }
 
-func runPython(ctx context.Context, code string) (string, error) {
-	cmd := exec.Command("python", "-c", code)
-	codeBuffer := bytes.NewBufferString(code)
-	cmd.Stdin = codeBuffer
+var environment = ""
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("process took too long. out: %s, err: %s", stdout.String(), stderr.String())
-		}
-	}
-	if stderr.String() != "" {
-		return "", fmt.Errorf("error executing code: %s", stderr.String())
-	}
-	if stdout.String() != "" {
-		log.Println(stdout.String())
-	}
-	return stdout.String(), nil
+func init() {
+	environment = config.Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local")
 }
 
-func runPythonV2(ctx context.Context, coderunID string, code string, params map[string]interface{}, body string) (string, error) {
+func runPython(ctx context.Context, coderunID string, code string, params map[string]interface{}, body string) (string, error) {
 	tempDir, err := os.MkdirTemp("./", "code-")
 	if err != nil {
 		fmt.Println("Error ao criar diretório temporário:", err)
 		return "", err
 	}
-	defer os.RemoveAll(tempDir)
+	// defer os.RemoveAll(tempDir)
 
 	//TODO: figure out how to handle temporary files dir
 	currentDir := "/home/rafael/weni/weni-ai/codeactions"
-
+	if environment != "local" {
+		currentDir = "/app"
+	}
 	sourceFile := currentDir + "/engines/py/main.py"
 	destinatinFile := tempDir + "/main.py"
 	data, err := os.ReadFile(sourceFile)
@@ -127,18 +98,11 @@ func runPythonV2(ctx context.Context, coderunID string, code string, params map[
 		return "", errors.Wrap(err, "Error on copy main file")
 	}
 
-	newFile := tempDir + "/action.py"
-	err = os.WriteFile(newFile, []byte(code), 0644)
+	codeFile := tempDir + "/action.py"
+	err = os.WriteFile(codeFile, []byte(code), 0644)
 	if err != nil {
-		return "", errors.Wrap(err, "Erro ao criar o novo arquivo")
+		return "", errors.Wrap(err, "Error on create code file")
 	}
-
-	cmd := exec.Command("ls", tempDir)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", errors.Wrap(err, "Erro ao listar o diretório")
-	}
-	fmt.Println(string(output))
 
 	paramsArgs := ""
 	for k, v := range params {
@@ -147,7 +111,7 @@ func runPythonV2(ctx context.Context, coderunID string, code string, params map[
 	bodyArg := fmt.Sprintf("-b %s", body)
 	idRunArg := fmt.Sprintf("-r %s", coderunID)
 
-	cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg)
+	cmd := exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -161,7 +125,7 @@ func runPythonV2(ctx context.Context, coderunID string, code string, params map[
 		return "", fmt.Errorf("error executing code: %s", stderr.String())
 	}
 	if stdout.String() != "" {
-		log.Println(stdout.String())
+		log.Println("code run stdout", stdout.String())
 	}
 	return stdout.String(), nil
 }
