@@ -73,7 +73,8 @@ func ExtractPythonLibs(pythonCode string) []string {
 func InstallPythonLibs(libs []string) error {
 	log.Println("Installing python libs")
 	for _, lib := range libs {
-		cmd := exec.Command("pip", "install", lib)
+		// cmd := exec.Command("pip", "install", lib)
+		cmd := exec.Command("pip", "install", "--no-cache-dir", lib)
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Stdout = &stdout
