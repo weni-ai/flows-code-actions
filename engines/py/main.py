@@ -7,8 +7,9 @@ import argparse
 import action
 
 dburl = os.environ.get("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017")
+dbname = os.environ.get("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions")
 client = pymongo.MongoClient(dburl)
-db = client["code-actions"]
+db = client[dbname]
 
 class Params:
     def __init__(self, params={}):
