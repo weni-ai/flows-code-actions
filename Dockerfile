@@ -34,5 +34,7 @@ COPY ./engines ./engines
 
 USER ${APP_USER}:${APP_GROUP}
 
+RUN chmod -R u+w /home/app
+
 EXPOSE 8080
 CMD ["./main"]
