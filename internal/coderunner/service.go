@@ -3,6 +3,7 @@ package coderunner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Service struct {
@@ -28,8 +30,9 @@ func NewCodeRunnerService(coderun *coderun.Service, codelog *codelog.Service) *S
 }
 
 func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string, params map[string]interface{}, body string) (*coderun.CodeRun, error) {
+	cID, _ := primitive.ObjectIDFromHex(codeID)
 	cr := &coderun.CodeRun{
-		CodeID: codeID,
+		CodeID: cID,
 		Status: coderun.StatusStarted,
 		Params: params,
 		Body:   body,
@@ -80,7 +83,7 @@ func runPython(ctx context.Context, coderunID string, code string, params map[st
 		fmt.Println("Error ao criar diretório temporário:", err)
 		return "", err
 	}
-	// defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir)
 
 	//TODO: figure out how to handle temporary files dir
 	currentDir := "/home/rafael/weni/weni-ai/codeactions"
@@ -105,13 +108,36 @@ func runPython(ctx context.Context, coderunID string, code string, params map[st
 	}
 
 	paramsArgs := ""
-	for k, v := range params {
-		paramsArgs += fmt.Sprintf("-a %s===%v", k, v)
+	if len(params) > 0 {
+		paramsArgs = "-a "
+		paramsjs, err := json.Marshal(params)
+		if err != nil {
+			return "", err
+		}
+		paramsArgs += string(paramsjs)
 	}
-	bodyArg := fmt.Sprintf("-b %s", body)
+
+	bodyArg := ""
+	if body != "" {
+		bodyArg = fmt.Sprintf("-b %s", body)
+	}
+
 	idRunArg := fmt.Sprintf("-r %s", coderunID)
 
-	cmd := exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg)
+	var cmd *exec.Cmd
+	if paramsArgs != "" {
+		if bodyArg != "" {
+			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg)
+		} else {
+			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, idRunArg)
+		}
+	} else {
+		if bodyArg != "" {
+			cmd = exec.Command("python", tempDir+"/main.py", bodyArg, idRunArg)
+		} else {
+			cmd = exec.Command("python", tempDir+"/main.py", idRunArg)
+		}
+	}
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -121,11 +147,11 @@ func runPython(ctx context.Context, coderunID string, code string, params map[st
 			return "", fmt.Errorf("process took too long. out: %s, err: %s", stdout.String(), stderr.String())
 		}
 	}
-	if stderr.String() != "" {
-		return "", fmt.Errorf("error executing code: %s", stderr.String())
-	}
 	if stdout.String() != "" {
 		log.Println("code run stdout", stdout.String())
+	}
+	if stderr.String() != "" {
+		return "", fmt.Errorf("error executing code: %s", stderr.String())
 	}
 	return stdout.String(), nil
 }
