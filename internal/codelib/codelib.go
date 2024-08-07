@@ -1,6 +1,7 @@
 package codelib
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -73,7 +74,17 @@ func InstallPythonLibs(libs []string) error {
 	log.Println("Installing python libs")
 	for _, lib := range libs {
 		cmd := exec.Command("pip", "install", lib)
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		err := cmd.Run()
+		if stderr.String() != "" {
+			log.Printf("error on install lib: %s\n", stderr.String())
+		}
+		if stdout.String() != "" {
+			log.Println("install lib stdout", stdout.String())
+		}
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error on install lib: %s", lib))
 		}
