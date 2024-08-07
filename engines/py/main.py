@@ -2,6 +2,7 @@ import os
 import pymongo
 from bson.objectid import ObjectId
 import datetime
+import json
 
 import argparse
 import action
@@ -61,23 +62,24 @@ class Engine:
 
 def main():
     parser = argparse.ArgumentParser(description='Parse key-value arguments')
-    parser.add_argument('-a', '--arg', action='append', help='Add an argument in the form of key===value')
+    parser.add_argument('-a', '--arg', type=str, help='Add an argument in the form of key===value')
     parser.add_argument('-b', '--body', type=str, help='Body content')
     parser.add_argument('-r', '--run', type=str, help='run id')
 
-    args = parser.parse_args()
 
+    args = parser.parse_args()
+    
     params_dict = {}
-    for arg in args.arg:
-        key, value = arg.split('===')
-        key = key.strip()
-        value = value.strip()
-        params_dict[key] = value
+    if args.arg != None:
+        params_dict = json.loads(args.arg)
 
     for key, value in params_dict.items():
         print(f"{key}={value}")
-        
-    body = args.body.strip()
+    
+    body = ""
+    if args.body != None:
+        body = args.body.strip()
+
     run_id = args.run.strip()
     
     engine = Engine(

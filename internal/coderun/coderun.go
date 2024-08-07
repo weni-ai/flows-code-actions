@@ -17,11 +17,11 @@ const (
 )
 
 type CodeRun struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 
-	CodeID string        `bson:"code_id" json:"code_id"`
-	Status CodeRunStatus `bson:"status" json:"status"`
-	Result string        `bson:"result" json:"result"`
+	CodeID primitive.ObjectID `bson:"code_id" json:"code_id"`
+	Status CodeRunStatus      `bson:"status" json:"status"`
+	Result string             `bson:"result" json:"result"`
 
 	Params map[string]interface{} `bson:"params" json:"params"`
 	Body   string                 `bson:"body" json:"body"`
@@ -39,5 +39,6 @@ type UseCase interface {
 }
 
 func NewCodeRun(codeID string, status CodeRunStatus) *CodeRun {
-	return &CodeRun{CodeID: codeID, Status: status}
+	cID, _ := primitive.ObjectIDFromHex(codeID)
+	return &CodeRun{CodeID: cID, Status: status}
 }
