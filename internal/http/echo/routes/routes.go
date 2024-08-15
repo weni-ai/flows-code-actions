@@ -40,6 +40,7 @@ func Setup(server *s.Server) {
 	server.Echo.GET("/health", healthHandler.Health)
 
 	server.Echo.POST("/admin/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.CreateByAdmin))
+	server.Echo.PATCH("/admin/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.UpdateByAdmin))
 	server.Echo.POST("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Create))
 	server.Echo.GET("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Find))
 	server.Echo.GET("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Get))
