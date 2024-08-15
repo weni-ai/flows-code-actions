@@ -108,5 +108,26 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusOK, result.Result)
+
+	statusCode := http.StatusOK
+	if sc, err := result.StatusCode(); err == nil {
+		statusCode = sc
+	}
+
+	contentType := result.ResponseContentType()
+	switch contentType {
+	case "json":
+		c.Response().Header().Set("Content-Type", "application/json; charset=UTF-8")
+	case "html":
+		c.Response().Header().Set("Content-Type", "text/html; charset=UTF-8")
+	default:
+		c.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	}
+
+	c.Response().WriteHeader(statusCode)
+	_, err = c.Response().Write([]byte(result.Result))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return nil
 }

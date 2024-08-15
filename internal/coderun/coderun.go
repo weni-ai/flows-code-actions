@@ -2,6 +2,9 @@ package coderun
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,9 +22,10 @@ const (
 type CodeRun struct {
 	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 
-	CodeID primitive.ObjectID `bson:"code_id" json:"code_id"`
-	Status CodeRunStatus      `bson:"status" json:"status"`
-	Result string             `bson:"result" json:"result"`
+	CodeID primitive.ObjectID     `bson:"code_id" json:"code_id"`
+	Status CodeRunStatus          `bson:"status" json:"status"`
+	Result string                 `bson:"result" json:"result"`
+	Extra  map[string]interface{} `bson:"extra" json:"extra"`
 
 	Params map[string]interface{} `bson:"params" json:"params"`
 	Body   string                 `bson:"body" json:"body"`
@@ -41,4 +45,33 @@ type UseCase interface {
 func NewCodeRun(codeID string, status CodeRunStatus) *CodeRun {
 	cID, _ := primitive.ObjectIDFromHex(codeID)
 	return &CodeRun{CodeID: cID, Status: status}
+}
+
+func (c *CodeRun) StatusCode() (int, error) {
+	if extraStatusCode, ok := c.Extra["status_code"]; ok {
+		switch v := extraStatusCode.(type) {
+		case int:
+			return v, nil
+		case int32:
+			return int(v), nil
+		case string:
+			if scInt, err := strconv.Atoi(v); err == nil {
+				return scInt, nil
+			} else {
+				return 0, fmt.Errorf("error converting status code to int: %v", err)
+			}
+		default:
+			return 0, fmt.Errorf("unexpected type for status code: %s", reflect.TypeOf(v))
+		}
+	}
+	return 0, fmt.Errorf("status_code couldn't be found")
+}
+
+func (c *CodeRun) ResponseContentType() string {
+	if extraContentType, ok := c.Extra["content_type"]; ok {
+		if contentType, isStr := extraContentType.(string); isStr {
+			return contentType
+		}
+	}
+	return "string"
 }

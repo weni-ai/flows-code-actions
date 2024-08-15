@@ -27,7 +27,7 @@ type Code struct {
 	Type        CodeType     `bson:"type" json:"type"`
 	Source      string       `bson:"source" json:"source"`
 	Language    LanguageType `bson:"language" json:"language"`
-	URL         string       `bson:"url" json:"url"`
+	URL         string       `bson:"url" json:"url,omitempty"`
 	ProjectUUID string       `bson:"project_uuid" json:"project_uuid"`
 
 	CreatedAt time.Time `bson:"creted_at" json:"creted_at"`

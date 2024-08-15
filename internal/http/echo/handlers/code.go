@@ -114,6 +114,46 @@ func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
 	return c.JSON(http.StatusCreated, newCode)
 }
 
+func (h *CodeHandler) UpdateByAdmin(c echo.Context) error {
+	codeID := c.Param("id")
+	if codeID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	ca := &code.Code{}
+	qp := c.QueryParams()
+	ca.Name = qp.Get("name")
+	ca.Language = code.LanguageType(qp.Get("language"))
+	ca.Type = code.CodeType(qp.Get("type"))
+	ca.ProjectUUID = qp.Get("project_uuid")
+
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to read body").Error())
+	}
+	ca.Source = string(body)
+
+	t := code.CodeType(ca.Type)
+	if err := t.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	lang := code.LanguageType(ca.Language)
+	if err := lang.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	cd, err := h.codeService.Update(
+		ctx,
+		codeID, ca.Name, ca.Source, string(ca.Type))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, cd)
+}
+
 func (h *CodeHandler) Create(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

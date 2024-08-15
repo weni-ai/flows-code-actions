@@ -27,11 +27,20 @@ class Result:
         self._result = result
         self._db = db
         self._runId = runId
-    def set(self, value):
-        self._result = str(value)
+        self._extra = None
+    def set(self, value="", status_code=200, content_type="text"):
+        if isinstance(value, str):
+            self._result = value
+        else:
+            try:
+                self._result = json.dumps(value)
+            except:
+                self._result = str(value)
+
+        self._extra = {"status_code": status_code, "content_type": content_type}
         self.save()
     def save(self):
-        result = db["coderun"].update_one({"_id": ObjectId(self._runId)}, {"$set": {"result": self._result}})
+        result = db["coderun"].update_one({"_id": ObjectId(self._runId)}, {"$set": {"result": self._result, "extra": self._extra}})
         if result.modified_count == 1:
             print("result saved!")
 
@@ -66,15 +75,11 @@ def main():
     parser.add_argument('-b', '--body', type=str, help='Body content')
     parser.add_argument('-r', '--run', type=str, help='run id')
 
-
     args = parser.parse_args()
     
     params_dict = {}
     if args.arg != None:
         params_dict = json.loads(args.arg)
-
-    for key, value in params_dict.items():
-        print(f"{key}={value}")
     
     body = ""
     if args.body != None:
