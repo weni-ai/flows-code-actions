@@ -30,7 +30,7 @@ type Code struct {
 	URL         string       `bson:"url" json:"url,omitempty"`
 	ProjectUUID string       `bson:"project_uuid" json:"project_uuid"`
 
-	CreatedAt time.Time `bson:"creted_at" json:"creted_at"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
 

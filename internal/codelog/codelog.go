@@ -24,7 +24,7 @@ type CodeLog struct {
 	Type    LogType `bson:"type" json:"type"`
 	Content string  `bson:"content" json:"content"`
 
-	CreatedAt time.Time `bson:"creted_at" json:"creted_at"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
 

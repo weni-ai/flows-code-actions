@@ -44,13 +44,31 @@ func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun,
 	return codeRun, err
 }
 
-func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string) ([]coderun.CodeRun, error) {
+func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter map[string]interface{}) ([]coderun.CodeRun, error) {
 	codes := []coderun.CodeRun{}
 	pcodeID, err := primitive.ObjectIDFromHex(codeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "error on parse id to ObjectID")
 	}
-	cstmt, err := r.collection.Find(context.Background(), bson.M{"code_id": pcodeID})
+	queryFilter := bson.M{"code_id": pcodeID}
+
+	createdAtFilter := bson.M{}
+	if afterFilter, ok := filter["after"]; ok {
+		if afterFilterTime, ok := afterFilter.(time.Time); ok {
+			createdAtFilter["$gte"] = primitive.NewDateTimeFromTime(afterFilterTime)
+
+		}
+	}
+	if beforeFilter, ok := filter["before"]; ok {
+		if beforeFilterTime, ok := beforeFilter.(time.Time); ok {
+			createdAtFilter["$lte"] = primitive.NewDateTimeFromTime(beforeFilterTime)
+		}
+	}
+	if len(createdAtFilter) > 0 {
+		queryFilter["created_at"] = createdAtFilter
+	}
+
+	cstmt, err := r.collection.Find(context.Background(), queryFilter)
 	if err != nil {
 		return nil, err
 	}

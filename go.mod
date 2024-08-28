@@ -5,6 +5,7 @@ go 1.21.4
 require github.com/labstack/echo/v4 v4.11.4
 
 require (
+	github.com/golang-module/carbon/v2 v2.3.12 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect

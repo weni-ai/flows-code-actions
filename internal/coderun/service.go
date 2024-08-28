@@ -20,8 +20,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*CodeRun, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) ListByCodeID(ctx context.Context, codeID string) ([]CodeRun, error) {
-	return s.repo.ListByCodeID(ctx, codeID)
+func (s *Service) ListByCodeID(ctx context.Context, codeID string, filter map[string]interface{}) ([]CodeRun, error) {
+	return s.repo.ListByCodeID(ctx, codeID, filter)
 }
 
 func (s *Service) Update(ctx context.Context, id string, codeRun *CodeRun) (*CodeRun, error) {

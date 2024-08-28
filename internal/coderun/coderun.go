@@ -30,14 +30,14 @@ type CodeRun struct {
 	Params map[string]interface{} `bson:"params" json:"params"`
 	Body   string                 `bson:"body" json:"body"`
 
-	CreatedAt time.Time `bson:"creted_at" json:"creted_at"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
 
 type UseCase interface {
 	Create(ctx context.Context, codeRun *CodeRun) (*CodeRun, error)
 	GetByID(ctx context.Context, id string) (*CodeRun, error)
-	ListByCodeID(ctx context.Context, codeID string) ([]CodeRun, error)
+	ListByCodeID(ctx context.Context, codeID string, filter map[string]interface{}) ([]CodeRun, error)
 	Update(ctx context.Context, codeRunID string, codeRun *CodeRun) (*CodeRun, error)
 	Delete(ctx context.Context, id string) error
 }

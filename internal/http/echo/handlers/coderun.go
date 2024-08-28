@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-module/carbon/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
@@ -41,10 +42,30 @@ func (h *CodeRunHandler) Find(c echo.Context) error {
 	if codeID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid code_id is required").Error())
 	}
+
+	filter := map[string]interface{}{}
+	afterp := c.QueryParam("after")
+	if afterp != "" {
+		after := carbon.Parse(afterp)
+		if !after.IsValid() {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid after parameter")
+		} else {
+			filter["after"] = after.StdTime()
+		}
+	}
+	beforep := c.QueryParam("before")
+	if beforep != "" {
+		before := carbon.Parse(beforep)
+		if !before.IsValid() {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid before parameter")
+		} else {
+			filter["before"] = before.StdTime()
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-
-	codeRuns, err := h.codeRunService.ListByCodeID(ctx, codeID)
+	codeRuns, err := h.codeRunService.ListByCodeID(ctx, codeID, filter)
 	if err != nil {
 		if codeRuns == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
