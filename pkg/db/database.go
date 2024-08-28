@@ -2,10 +2,10 @@ package db
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,7 +23,7 @@ func GetMongoDatabase(cf *config.Config) (*mongo.Database, error) {
 	if err := mongoClient.Ping(ctx, nil); err != nil {
 		return nil, errors.Wrap(err, "mongodb fail to ping")
 	} else {
-		slog.Info("mongodb OK")
+		log.Info("mongodb OK")
 	}
 	db := mongoClient.Database(cf.DB.Name)
 	return db, nil

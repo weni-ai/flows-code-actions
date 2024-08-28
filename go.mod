@@ -2,10 +2,15 @@ module github.com/weni-ai/flows-code-actions
 
 go 1.21.4
 
-require github.com/labstack/echo/v4 v4.11.4
+require (
+	github.com/golang-module/carbon/v2 v2.3.12
+	github.com/labstack/echo/v4 v4.11.4
+	github.com/sirupsen/logrus v1.9.3
+)
 
 require (
-	github.com/golang-module/carbon/v2 v2.3.12 // indirect
+	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d // indirect
+	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
@@ -18,6 +23,7 @@ require (
 )
 
 require (
+	github.com/evalphobia/logrus_sentry v0.8.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

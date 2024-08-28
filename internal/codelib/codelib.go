@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -81,10 +82,10 @@ func InstallPythonLibs(libs []string) error {
 		cmd.Stderr = &stderr
 		err := cmd.Run()
 		if stderr.String() != "" {
-			log.Printf("error on install lib: %s\n", stderr.String())
+			log.Println("install lib stderr: ", stderr.String())
 		}
 		if stdout.String() != "" {
-			log.Println("install lib stdout", stdout.String())
+			log.Println("install lib stdout: ", stdout.String())
 		}
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("Error on install lib: %s", lib))

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 	codeRepoMongo "github.com/weni-ai/flows-code-actions/internal/code/mongodb"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
@@ -12,6 +13,7 @@ import (
 	s "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
 
+	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
@@ -34,7 +36,28 @@ func Setup(server *s.Server) {
 	coderunnerService := coderunner.NewCodeRunnerService(coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
 
-	server.Echo.Use(middleware.Logger())
+	log := logrus.New()
+	server.Echo.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogURI:      true,
+		LogStatus:   true,
+		LogError:    true,
+		HandleError: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			if v.Error == nil {
+				log.WithFields(logrus.Fields{
+					"URI":    v.URI,
+					"status": v.Status,
+				}).Info("request")
+			} else {
+				log.WithFields(logrus.Fields{
+					"URI":    v.URI,
+					"status": v.Status,
+					"error":  v.Error,
+				}).Error("request error")
+			}
+			return nil
+		},
+	}))
 
 	server.Echo.GET("/", healthHandler.Health)
 	server.Echo.GET("/health", healthHandler.Health)

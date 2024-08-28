@@ -8,6 +8,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 )
 
@@ -91,16 +92,20 @@ func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
 
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to read body").Error())
+		err = errors.Wrap(err, "failed to read body")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ca.Source = string(body)
 
 	t := code.CodeType(ca.Type)
 	if err := t.Validate(); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	lang := code.LanguageType(ca.Language)
 	if err := lang.Validate(); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -108,6 +113,7 @@ func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
 		ctx,
 		code.NewCodeAction(ca.Name, ca.Source, lang, t, ca.URL, ca.ProjectUUID))
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -117,7 +123,9 @@ func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
 func (h *CodeHandler) UpdateByAdmin(c echo.Context) error {
 	codeID := c.Param("id")
 	if codeID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
+		err := errors.New("valid id is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -131,16 +139,20 @@ func (h *CodeHandler) UpdateByAdmin(c echo.Context) error {
 
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to read body").Error())
+		err := errors.Wrap(err, "failed to read body")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ca.Source = string(body)
 
 	t := code.CodeType(ca.Type)
 	if err := t.Validate(); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	lang := code.LanguageType(ca.Language)
 	if err := lang.Validate(); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -148,6 +160,7 @@ func (h *CodeHandler) UpdateByAdmin(c echo.Context) error {
 		ctx,
 		codeID, ca.Name, ca.Source, string(ca.Type))
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -160,14 +173,17 @@ func (h *CodeHandler) Create(c echo.Context) error {
 
 	ca := new(CreateCodeActionRequest)
 	if err := c.Bind(ca); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	t := code.CodeType(ca.Type)
 	if err := t.Validate(); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	lang := code.LanguageType(ca.Language)
 	if err := lang.Validate(); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -175,6 +191,7 @@ func (h *CodeHandler) Create(c echo.Context) error {
 		ctx,
 		code.NewCodeAction(ca.Name, ca.Source, lang, t, ca.URL, ca.ProjectUUID))
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -185,13 +202,16 @@ func (h *CodeHandler) Create(c echo.Context) error {
 func (h *CodeHandler) Get(c echo.Context) error {
 	codeID := c.Param("id")
 	if codeID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
+		err := errors.New("valid id is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	codeAction, err := h.codeService.GetByID(ctx, codeID)
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		if codeAction == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
@@ -204,7 +224,9 @@ func (h *CodeHandler) Get(c echo.Context) error {
 func (h *CodeHandler) Find(c echo.Context) error {
 	projectUUID := c.QueryParam("project_uuid")
 	if projectUUID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid project_uuid is required").Error())
+		err := errors.New("valid project_uuid is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	codeType := c.QueryParam("code_type")
 
@@ -213,6 +235,7 @@ func (h *CodeHandler) Find(c echo.Context) error {
 
 	codeActions, err := h.codeService.ListProjectCodes(ctx, projectUUID, codeType)
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		if codeActions == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
@@ -224,19 +247,24 @@ func (h *CodeHandler) Find(c echo.Context) error {
 func (h *CodeHandler) Update(c echo.Context) error {
 	codeID := c.Param("id")
 	if codeID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
+		err := errors.New("valid id is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	sca := new(SaveCodeActionRequest)
 	if err := c.Bind(sca); err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	cd, err := h.codeService.Update(ctx, codeID, sca.Name, sca.Source, sca.Type)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.Wrap(err, "failed to save code").Error())
+		err = errors.Wrap(err, "failed to save code")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	response := ParseCodeToResponse(cd)
@@ -246,13 +274,16 @@ func (h *CodeHandler) Update(c echo.Context) error {
 func (h *CodeHandler) Delete(c echo.Context) error {
 	codeID := c.Param("id")
 	if codeID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
+		err := errors.New("valid id is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	err := h.codeService.Delete(ctx, codeID)
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.NoContent(http.StatusOK)

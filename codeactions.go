@@ -2,11 +2,11 @@ package codeactions
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
@@ -20,7 +20,7 @@ func Start(cfg *config.Config) {
 
 	db, err := db.GetMongoDatabase(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal(err)
 	}
 
 	codeactions.DB = db
@@ -28,13 +28,13 @@ func Start(cfg *config.Config) {
 	routes.Setup(codeactions)
 
 	if err := SetupLibs(codeactions); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal(err)
 	}
 
 	go func() {
 		err := codeactions.Start(cfg.HTTP.Port)
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal(err)
 		}
 	}()
 

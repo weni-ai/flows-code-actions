@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
@@ -54,6 +54,7 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 		return nil, errors.New("unsupported language code type")
 	}
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		newCodeRun.Status = coderun.StatusFailed
 		newCodeRun.Result = errors.Wrap(err, "error on executing code").Error()
 		errcoderun, cerr := s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
@@ -148,10 +149,10 @@ func runPython(ctx context.Context, coderunID string, code string, params map[st
 		}
 	}
 	if stdout.String() != "" {
-		log.Println("code run stdout", stdout.String())
+		log.Println("code run stdout: ", stdout.String())
 	}
 	if stderr.String() != "" {
-		return "", fmt.Errorf("error executing code: %s", stderr.String())
+		return stderr.String(), fmt.Errorf("error executing code: %s", stderr.String())
 	}
 	return stdout.String(), nil
 }

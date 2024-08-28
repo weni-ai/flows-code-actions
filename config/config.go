@@ -11,6 +11,8 @@ type Config struct {
 	OIDC        OIDCConfig
 	AuthToken   string
 	Environment string
+	LogLevel    string
+	SentryDSN   string
 }
 
 type HTTPConfig struct {
@@ -37,6 +39,8 @@ func NewConfig() *Config {
 		OIDC:        LoadOIDCConfig(),
 		AuthToken:   Getenv("FLOWS_CODE_ACTIONS_AUTH_TOKEN", ""),
 		Environment: Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local"),
+		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
+		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
 	}
 }
 

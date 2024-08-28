@@ -8,6 +8,7 @@ import (
 	"github.com/golang-module/carbon/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
 )
 
@@ -22,13 +23,16 @@ func NewCodeRunHandler(service coderun.UseCase) *CodeRunHandler {
 func (h *CodeRunHandler) Get(c echo.Context) error {
 	codeRunID := c.Param("id")
 	if codeRunID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid id is required").Error())
+		err := errors.New("valid id is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	codeRun, err := h.codeRunService.GetByID(ctx, codeRunID)
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		if codeRun == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
@@ -40,7 +44,9 @@ func (h *CodeRunHandler) Get(c echo.Context) error {
 func (h *CodeRunHandler) Find(c echo.Context) error {
 	codeID := c.QueryParam("code_id")
 	if codeID == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid code_id is required").Error())
+		err := errors.New("valid code_id is required")
+		log.WithError(err).Error(err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	filter := map[string]interface{}{}
@@ -48,7 +54,9 @@ func (h *CodeRunHandler) Find(c echo.Context) error {
 	if afterp != "" {
 		after := carbon.Parse(afterp)
 		if !after.IsValid() {
-			return echo.NewHTTPError(http.StatusBadRequest, "invalid after parameter")
+			err := errors.New("invalid after parameter")
+			log.WithError(err).Error(err.Error())
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		} else {
 			filter["after"] = after.StdTime()
 		}
@@ -57,7 +65,9 @@ func (h *CodeRunHandler) Find(c echo.Context) error {
 	if beforep != "" {
 		before := carbon.Parse(beforep)
 		if !before.IsValid() {
-			return echo.NewHTTPError(http.StatusBadRequest, "invalid before parameter")
+			err := errors.New("invalid before parameter")
+			log.WithError(err).Error(err.Error())
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		} else {
 			filter["before"] = before.StdTime()
 		}
@@ -67,10 +77,11 @@ func (h *CodeRunHandler) Find(c echo.Context) error {
 	defer cancel()
 	codeRuns, err := h.codeRunService.ListByCodeID(ctx, codeID, filter)
 	if err != nil {
+		log.WithError(err).Error(err.Error())
 		if codeRuns == nil {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, codeRuns)
 }
