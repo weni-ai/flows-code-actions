@@ -33,7 +33,7 @@ func Setup(server *s.Server) {
 	codelogService := codelog.NewCodeLogService(codelogRepo)
 	codelogHandler := handlers.NewCodeLogHandler(codelogService)
 
-	coderunnerService := coderunner.NewCodeRunnerService(coderunService, codelogService)
+	coderunnerService := coderunner.NewCodeRunnerService(server.Config, coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
 
 	log := logrus.New()

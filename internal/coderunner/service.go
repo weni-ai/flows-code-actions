@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/containerd/cgroups/v3/cgroup1"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/config"
@@ -23,10 +24,11 @@ import (
 type Service struct {
 	codeRun *coderun.Service
 	codeLog *codelog.Service
+	confs   *config.Config
 }
 
-func NewCodeRunnerService(coderun *coderun.Service, codelog *codelog.Service) *Service {
-	return &Service{codeRun: coderun, codeLog: codelog}
+func NewCodeRunnerService(confs *config.Config, coderun *coderun.Service, codelog *codelog.Service) *Service {
+	return &Service{codeRun: coderun, codeLog: codelog, confs: confs}
 }
 
 func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string, params map[string]interface{}, body string) (*coderun.CodeRun, error) {
@@ -236,7 +238,7 @@ func compileGoAndRun(code string) (string, error) {
 
 	// var buildPkgArg = "."
 
-	if err := ioutil.WriteFile(tmpDir+"/main.go", []byte(code), 0644); err != nil {
+	if err := os.WriteFile(tmpDir+"/main.go", []byte(code), 0644); err != nil {
 		return "", fmt.Errorf("error creating temp file %q: %v", tmpDir, err)
 	}
 
@@ -284,4 +286,36 @@ func compileGoAndRun(code string) (string, error) {
 		}
 	}
 	return recOut.String(), nil
+}
+
+func InitCGroup(ctx context.Context, config *config.Config, codeID string) (cgroup1.Cgroup, error) {
+	cg, err := cgroup1.Load(cgroup1.StaticPath("/" + codeID))
+	if err != nil {
+		resources := NewResourceConfig(config)
+		cg, err = cgroup1.New(
+			cgroup1.StaticPath("/"+codeID),
+			resources,
+		)
+		if err != nil {
+			err = errors.Wrap(err, "failed to create cgroup")
+			log.Error(err)
+			return nil, err
+		}
+	}
+	return cg, nil
+}
+
+func NewResourceConfig(config *config.Config) *specs.LinuxResources {
+	cpu := &specs.LinuxCPU{
+		Shares: config.ResourceManagement.CPU.Shares,
+		Quota:  config.ResourceManagement.CPU.Quota,
+	}
+	memory := &specs.LinuxMemory{
+		Limit:       config.ResourceManagement.Memory.Limit,
+		Reservation: config.ResourceManagement.Memory.Reservation,
+	}
+	return &specs.LinuxResources{
+		CPU:    cpu,
+		Memory: memory,
+	}
 }
