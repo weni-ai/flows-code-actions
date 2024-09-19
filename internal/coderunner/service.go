@@ -21,6 +21,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var resourceConfig *specs.LinuxResources
+
 type Service struct {
 	codeRun *coderun.Service
 	codeLog *codelog.Service
@@ -47,7 +49,7 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 
 	switch language {
 	case "python":
-		_, err = runPython(ctx, newCodeRun.ID.Hex(), code, params, body)
+		_, err = s.runPython(ctx, codeID, newCodeRun.ID.Hex(), code, params, body)
 	case "javascript":
 		_, err = runJs(ctx, code)
 	case "go":
@@ -80,7 +82,7 @@ func init() {
 	environment = config.Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local")
 }
 
-func runPython(ctx context.Context, coderunID string, code string, params map[string]interface{}, body string) (string, error) {
+func (s *Service) runPython(ctx context.Context, codeID string, coderunID string, code string, params map[string]interface{}, body string) (string, error) {
 	tempDir, err := os.MkdirTemp("./", "code-")
 	if err != nil {
 		fmt.Println("Error ao criar diretório temporário:", err)
@@ -145,7 +147,21 @@ func runPython(ctx context.Context, coderunID string, code string, params map[st
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("process took too long. out: %s, err: %s", stdout.String(), stderr.String())
+		}
+	}
+
+	if s.confs.ResourceManagement.Enabled {
+		cg, err := InitCGroup(ctx, s.confs, codeID)
+		if err != nil {
+			return "", err
+		}
+		cg.AddProc(uint64(cmd.Process.Pid))
+	}
+
+	if err := cmd.Wait(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return "", fmt.Errorf("process took too long. out: %s, err: %s", stdout.String(), stderr.String())
 		}
@@ -288,12 +304,14 @@ func compileGoAndRun(code string) (string, error) {
 	return recOut.String(), nil
 }
 
+// InitCGroup load or create a new CGroup for the given code
 func InitCGroup(ctx context.Context, config *config.Config, codeID string) (cgroup1.Cgroup, error) {
-	cg, err := cgroup1.Load(cgroup1.StaticPath("/" + codeID))
+	cgpath := cgroup1.StaticPath("/" + codeID)
+	cg, err := cgroup1.Load(cgpath)
 	if err != nil {
-		resources := NewResourceConfig(config)
+		resources := ResourceConfig(config)
 		cg, err = cgroup1.New(
-			cgroup1.StaticPath("/"+codeID),
+			cgpath,
 			resources,
 		)
 		if err != nil {
@@ -305,7 +323,11 @@ func InitCGroup(ctx context.Context, config *config.Config, codeID string) (cgro
 	return cg, nil
 }
 
-func NewResourceConfig(config *config.Config) *specs.LinuxResources {
+// ResourceConfig returns a resource config for the given application configuration
+func ResourceConfig(config *config.Config) *specs.LinuxResources {
+	if resourceConfig != nil {
+		return resourceConfig
+	}
 	cpu := &specs.LinuxCPU{
 		Shares: config.ResourceManagement.CPU.Shares,
 		Quota:  config.ResourceManagement.CPU.Quota,
@@ -314,8 +336,9 @@ func NewResourceConfig(config *config.Config) *specs.LinuxResources {
 		Limit:       config.ResourceManagement.Memory.Limit,
 		Reservation: config.ResourceManagement.Memory.Reservation,
 	}
-	return &specs.LinuxResources{
+	resourceConfig = &specs.LinuxResources{
 		CPU:    cpu,
 		Memory: memory,
 	}
+	return resourceConfig
 }
