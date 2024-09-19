@@ -10,16 +10,22 @@ require (
 
 require (
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d // indirect
+	github.com/containerd/cgroups/v3 v3.0.3 // indirect
+	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
+	github.com/docker/go-units v0.4.0 // indirect
 	github.com/getsentry/raven-go v0.2.0 // indirect
+	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
+	github.com/opencontainers/runtime-spec v1.0.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 )
 
 require (

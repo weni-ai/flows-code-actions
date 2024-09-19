@@ -6,13 +6,14 @@ import (
 )
 
 type Config struct {
-	HTTP        HTTPConfig
-	DB          DBConfig
-	OIDC        OIDCConfig
-	AuthToken   string
-	Environment string
-	LogLevel    string
-	SentryDSN   string
+	HTTP               HTTPConfig
+	DB                 DBConfig
+	OIDC               OIDCConfig
+	AuthToken          string
+	Environment        string
+	LogLevel           string
+	SentryDSN          string
+	ResourceManagement ResourceConfig
 }
 
 type HTTPConfig struct {
@@ -30,6 +31,25 @@ type OIDCConfig struct {
 	AuthEnabled bool
 	Realm       string
 	Host        string
+}
+
+// ResourceConfig represents a resource configuration for each code execution in a project cgroup
+type ResourceConfig struct {
+	Enabled bool
+	CPU     CPUConfig
+	Memory  MemoryConfig
+}
+
+// CPUConfig represents a resource configuration for each code execution in a project cgroup related to cpu resource management
+type CPUConfig struct {
+	Shares *uint64
+	Quota  *int64
+}
+
+// MemoryConfig represents a resource configuration for each code execution in a project cgroup related to memory resource management
+type MemoryConfig struct {
+	Limit       *int64
+	Reservation *int64
 }
 
 func NewConfig() *Config {
@@ -75,6 +95,38 @@ func LoadOIDCConfig() OIDCConfig {
 		Realm:       Realm,
 		Host:        Host,
 		AuthEnabled: Enabled,
+	}
+}
+
+func LoadResourcesConfig() ResourceConfig {
+	enabled, err := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_RESOURCE_ENABLED", "false"))
+	if err != nil {
+		enabled = false
+	}
+
+	cpuShares, _ := strconv.ParseUint(Getenv("FLOWS_CODE_ACTIONS_CPU_SHARES", "0"), 10, 64)
+	cpuQuota, _ := strconv.ParseInt(Getenv("FLOWS_CODE_ACTIONS_CPU_QUOTA", "0"), 10, 64)
+	cpu := CPUConfig{}
+	if cpuShares != 0 {
+		cpu.Shares = &cpuShares
+	}
+	if cpuQuota != 0 {
+		cpu.Quota = &cpuQuota
+	}
+
+	memLimit, _ := strconv.ParseInt(Getenv("FLOWS_CODE_ACTIONS_MEMORY_LIMIT", "0"), 10, 64)
+	memRes, _ := strconv.ParseInt(Getenv("FLOWS_CODE_ACTIONS_MEMORY_RESERVATION", "0"), 10, 64)
+	memory := MemoryConfig{}
+	if memLimit != 0 {
+		memory.Limit = &memLimit
+	}
+	if memRes != 0 {
+		memory.Reservation = &memRes
+	}
+	return ResourceConfig{
+		Enabled: enabled,
+		CPU:     cpu,
+		Memory:  memory,
 	}
 }
 
