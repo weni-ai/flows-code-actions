@@ -53,7 +53,7 @@ func NewCodeLib(name string, language LanguageType) *CodeLib {
 }
 
 func ExtractPythonLibs(pythonCode string) []string {
-	standardLibraries := []string{"base64", "datetime", "json", "math", "os", "random", "re", "sys"}
+	standardLibraries := []string{"base64", "datetime", "email", "imaplib", "json", "math", "os", "random", "re", "sys", "time", "urllib", "urllib.parse", "urllib.request"} // must be alphabetically ordered
 	re := regexp.MustCompile(`^(from|import)\s+([\w.]+)`)
 
 	var libraries []string
