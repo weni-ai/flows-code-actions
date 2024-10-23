@@ -16,11 +16,11 @@ type userRepo struct {
 }
 
 func NewUserRepository(db *mongo.Database) *userRepo {
-	collection := db.Collection("user")
+	collection := db.Collection("user_permissions")
 	return &userRepo{collection: collection}
 }
 
-func (r *userRepo) Create(ctx context.Context, user *permission.User) (*permission.User, error) {
+func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 	result, err := r.collection.InsertOne(ctx, user)
@@ -31,8 +31,8 @@ func (r *userRepo) Create(ctx context.Context, user *permission.User) (*permissi
 	return nil, nil
 }
 
-func (r *userRepo) Find(ctx context.Context, user *permission.User) (*permission.User, error) {
-	u := &permission.User{}
+func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {
+	u := &permission.UserPermission{}
 	filters := bson.M{}
 	if user.Name != "" {
 		filters["name"] = user.Name
@@ -53,7 +53,7 @@ func (r *userRepo) Find(ctx context.Context, user *permission.User) (*permission
 	return u, nil
 }
 
-func (r *userRepo) Update(ctx context.Context, userID string, user *permission.User) (*permission.User, error) {
+func (r *userRepo) Update(ctx context.Context, userID string, user *permission.UserPermission) (*permission.UserPermission, error) {
 	user.UpdatedAt = time.Now()
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {

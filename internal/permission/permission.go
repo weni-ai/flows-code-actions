@@ -14,14 +14,14 @@ const (
 	ViewerRole  Role = "viewer"
 )
 
-type Permission string
+type PermissionRole string
 
 const (
-	ReadPermission  Permission = "read"
-	WritePermission Permission = "write"
+	ReadPermission  PermissionRole = "read"
+	WritePermission PermissionRole = "write"
 )
 
-type User struct {
+type UserPermission struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	ProjectUUID string             `bson:"project_uuid,omitempty" json:"project_uuid,omitempty"`
 	Name        string             `bson:"username" json:"username,omitempty"`
@@ -32,8 +32,8 @@ type User struct {
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
 
-func NewUser(projectUUID, name, email string, role Role) *User {
-	return &User{
+func NewUserPermission(projectUUID, name, email string, role Role) *UserPermission {
+	return &UserPermission{
 		ProjectUUID: projectUUID,
 		Name:        name,
 		Email:       email,
@@ -41,7 +41,7 @@ func NewUser(projectUUID, name, email string, role Role) *User {
 	}
 }
 
-var accessMatrix = map[Role]map[Permission]bool{
+var accessMatrix = map[Role]map[PermissionRole]bool{
 	ManagerRole: {
 		ReadPermission:  true,
 		WritePermission: true,
@@ -52,20 +52,20 @@ var accessMatrix = map[Role]map[Permission]bool{
 	},
 }
 
-func HasPermission(user *User, permission Permission) bool {
+func HasPermission(user *UserPermission, permission PermissionRole) bool {
 	return accessMatrix[user.Role][permission]
 }
 
-type UserUseCase interface {
-	Create(ctx context.Context, user *User) (*User, error)
-	Find(ctx context.Context, user *User) (*User, error)
-	Update(ctx context.Context, id string, user *User) (*User, error)
+type UserPeermissionUseCase interface {
+	Create(ctx context.Context, user *UserPermission) (*UserPermission, error)
+	Find(ctx context.Context, user *UserPermission) (*UserPermission, error)
+	Update(ctx context.Context, id string, user *UserPermission) (*UserPermission, error)
 	Delete(ctx context.Context, id string) error
 }
 
-type UserRepository interface {
-	Create(context.Context, *User) (*User, error)
-	Find(context.Context, *User) (*User, error)
-	Update(context.Context, string, *User) (*User, error)
+type UserPermissionRepository interface {
+	Create(context.Context, *UserPermission) (*UserPermission, error)
+	Find(context.Context, *UserPermission) (*UserPermission, error)
+	Update(context.Context, string, *UserPermission) (*UserPermission, error)
 	Delete(context.Context, string) error
 }
