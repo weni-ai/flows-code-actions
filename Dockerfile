@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 
 FROM alpine:3.18.4
 
-RUN apk add --no-cache python3 py3-pip
+RUN apk add --no-cache python3 py3-pip ffmpeg
 RUN pip install pymongo
 
 ENV APP_USER=app \
