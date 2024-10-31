@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 	codeRepoMongo "github.com/weni-ai/flows-code-actions/internal/code/mongodb"
@@ -57,6 +59,11 @@ func Setup(server *s.Server) {
 			}
 			return nil
 		},
+	}))
+
+	server.Echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"https://drogasil-demo.netlify.app"},
+		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 	}))
 
 	server.Echo.GET("/", healthHandler.Health)
