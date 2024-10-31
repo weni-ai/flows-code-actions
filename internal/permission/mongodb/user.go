@@ -34,9 +34,6 @@ func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) 
 func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {
 	u := &permission.UserPermission{}
 	filters := bson.M{}
-	if user.Name != "" {
-		filters["name"] = user.Name
-	}
 	if user.Email != "" {
 		filters["email"] = user.Email
 	}

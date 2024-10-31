@@ -10,8 +10,13 @@ import (
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
+	"github.com/weni-ai/flows-code-actions/internal/eventdriven/rabbitmq"
 	server "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/routes"
+	"github.com/weni-ai/flows-code-actions/internal/permission"
+	permRepoMongo "github.com/weni-ai/flows-code-actions/internal/permission/mongodb"
+	"github.com/weni-ai/flows-code-actions/internal/project"
+	projRepoMongo "github.com/weni-ai/flows-code-actions/internal/project/mongodb"
 	"github.com/weni-ai/flows-code-actions/pkg/db"
 )
 
@@ -37,6 +42,27 @@ func Start(cfg *config.Config) {
 			log.WithError(err).Fatal(err)
 		}
 	}()
+
+	if cfg.RabbitmqURL != "" {
+		eda := rabbitmq.NewEDA(cfg.RabbitmqURL)
+
+		projectConsumer := project.NewProjectConsumer(
+			project.NewProjectService(
+				projRepoMongo.NewProjectRepository(db),
+			),
+		)
+		permissionConsumer := permission.NewPermissionConsumer(
+			permission.NewUserService(
+				permRepoMongo.NewUserRepository(db),
+			),
+		)
+		eda.AddConsumer(projectConsumer)
+		eda.AddConsumer(permissionConsumer)
+
+		if err := eda.StartConsumers(); err != nil {
+			log.WithError(err)
+		}
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)

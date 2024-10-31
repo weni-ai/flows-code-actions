@@ -14,6 +14,7 @@ type Config struct {
 	LogLevel           string
 	SentryDSN          string
 	ResourceManagement ResourceConfig
+	RabbitmqURL        string
 }
 
 type HTTPConfig struct {
@@ -61,6 +62,7 @@ func NewConfig() *Config {
 		Environment: Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local"),
 		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
 		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
+		RabbitmqURL: Getenv("FLOWS_CODE_ACTIONS_RABBITMQ_URL", ""),
 	}
 }
 

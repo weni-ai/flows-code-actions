@@ -135,7 +135,6 @@ func (h *CodeHandler) UpdateByAdmin(c echo.Context) error {
 	ca.Name = qp.Get("name")
 	ca.Language = code.LanguageType(qp.Get("language"))
 	ca.Type = code.CodeType(qp.Get("type"))
-	ca.ProjectUUID = qp.Get("project_uuid")
 
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
