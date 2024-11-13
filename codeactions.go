@@ -10,6 +10,7 @@ import (
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
+	"github.com/weni-ai/flows-code-actions/internal/db"
 	"github.com/weni-ai/flows-code-actions/internal/eventdriven/rabbitmq"
 	server "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/routes"
@@ -17,7 +18,6 @@ import (
 	permRepoMongo "github.com/weni-ai/flows-code-actions/internal/permission/mongodb"
 	"github.com/weni-ai/flows-code-actions/internal/project"
 	projRepoMongo "github.com/weni-ai/flows-code-actions/internal/project/mongodb"
-	"github.com/weni-ai/flows-code-actions/pkg/db"
 )
 
 func Start(cfg *config.Config) {
@@ -43,18 +43,25 @@ func Start(cfg *config.Config) {
 		}
 	}()
 
-	if cfg.RabbitmqURL != "" {
-		eda := rabbitmq.NewEDA(cfg.RabbitmqURL)
+	if cfg.EDA.RabbitmqURL != "" {
+		eda := rabbitmq.NewEDA(cfg.EDA.RabbitmqURL)
+
+		permissionService := permission.NewUserPermissionService(
+			permRepoMongo.NewUserRepository(db),
+		)
 
 		projectConsumer := project.NewProjectConsumer(
 			project.NewProjectService(
 				projRepoMongo.NewProjectRepository(db),
 			),
+			permissionService,
+			cfg.EDA.ProjectExchangeName,
+			cfg.EDA.ProjectQueueName,
 		)
 		permissionConsumer := permission.NewPermissionConsumer(
-			permission.NewUserService(
-				permRepoMongo.NewUserRepository(db),
-			),
+			permissionService,
+			cfg.EDA.PermissionExchangeName,
+			cfg.EDA.PermissionQueueName,
 		)
 		eda.AddConsumer(projectConsumer)
 		eda.AddConsumer(permissionConsumer)

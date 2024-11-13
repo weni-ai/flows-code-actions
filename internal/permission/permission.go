@@ -10,8 +10,9 @@ import (
 type Role int
 
 const (
-	ManagerRole Role = Role(2)
-	ViewerRole  Role = Role(1)
+	ModeratorRole   Role = Role(3)
+	ContributorRole Role = Role(2)
+	ViewerRole      Role = Role(1)
 )
 
 type PermissionRole string
@@ -39,19 +40,14 @@ func NewUserPermission(projectUUID, email string, role Role) *UserPermission {
 	}
 }
 
-var accessMatrix = map[Role]map[PermissionRole]bool{
-	ManagerRole: {
-		ReadPermission:  true,
-		WritePermission: true,
-	},
-	ViewerRole: {
-		ReadPermission:  true,
-		WritePermission: false,
-	},
-}
-
 func HasPermission(user *UserPermission, permission PermissionRole) bool {
-	return accessMatrix[user.Role][permission]
+	if permission == ReadPermission && user.Role >= Role(1) {
+		return true
+	}
+	if permission == WritePermission && user.Role >= Role(3) {
+		return true
+	}
+	return false
 }
 
 type UserPermissionUseCase interface {

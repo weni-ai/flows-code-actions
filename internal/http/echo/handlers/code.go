@@ -79,7 +79,7 @@ func NewCodeHandler(service code.UseCase) *CodeHandler {
 	return &CodeHandler{codeService: service}
 }
 
-func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
+func (h *CodeHandler) CreateCode(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -120,7 +120,7 @@ func (h *CodeHandler) CreateByAdmin(c echo.Context) error {
 	return c.JSON(http.StatusCreated, newCode)
 }
 
-func (h *CodeHandler) UpdateByAdmin(c echo.Context) error {
+func (h *CodeHandler) UpdateCode(c echo.Context) error {
 	codeID := c.Param("id")
 	if codeID == "" {
 		err := errors.New("valid id is required")

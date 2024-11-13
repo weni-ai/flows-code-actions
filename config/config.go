@@ -14,7 +14,7 @@ type Config struct {
 	LogLevel           string
 	SentryDSN          string
 	ResourceManagement ResourceConfig
-	RabbitmqURL        string
+	EDA                EDAConfig
 }
 
 type HTTPConfig struct {
@@ -53,6 +53,14 @@ type MemoryConfig struct {
 	Reservation *int64
 }
 
+type EDAConfig struct {
+	RabbitmqURL            string
+	ProjectExchangeName    string
+	ProjectQueueName       string
+	PermissionExchangeName string
+	PermissionQueueName    string
+}
+
 func NewConfig() *Config {
 	return &Config{
 		HTTP:        LoadHTTPConfig(),
@@ -62,7 +70,7 @@ func NewConfig() *Config {
 		Environment: Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local"),
 		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
 		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
-		RabbitmqURL: Getenv("FLOWS_CODE_ACTIONS_RABBITMQ_URL", ""),
+		EDA:         LoadEDAConfig(),
 	}
 }
 
@@ -129,6 +137,21 @@ func LoadResourcesConfig() ResourceConfig {
 		Enabled: enabled,
 		CPU:     cpu,
 		Memory:  memory,
+	}
+}
+
+func LoadEDAConfig() EDAConfig {
+	rabbitmqURL := Getenv("FLOWS_CODE_ACTIONS_RABBITMQ_URL", "")
+	projectExchangeName := Getenv("FLOWS_CODE_ACTIONS_PROJECT_EXCHANGE", "")
+	projectQueueName := Getenv("FLOWS_CODE_ACTIONS_PROJECT_QUEUE", "")
+	permissionExchangeName := Getenv("FLOWS_CODE_ACTIONS_PERMISSION_EXCHANGE", "")
+	permissionQueueName := Getenv("FLOW_CODE_ACTIONS_PERMISSION_QUEUE", "")
+	return EDAConfig{
+		RabbitmqURL:            rabbitmqURL,
+		ProjectExchangeName:    projectExchangeName,
+		ProjectQueueName:       projectQueueName,
+		PermissionExchangeName: permissionExchangeName,
+		PermissionQueueName:    permissionQueueName,
 	}
 }
 

@@ -20,11 +20,19 @@ type PermissionConsumer struct {
 	permissionService UserPermissionUseCase
 }
 
-func NewPermissionConsumer(permissionService UserPermissionUseCase) *PermissionConsumer {
+func NewPermissionConsumer(permissionService UserPermissionUseCase, exchange, queue string) *PermissionConsumer {
+	exchangeName := EXCHANGE_NAME
+	if exchange != "" {
+		exchangeName = exchange
+	}
+	queueName := QUEUE_NAME
+	if queue != "" {
+		queueName = queue
+	}
 	c := &PermissionConsumer{
 		Consumer: rabbitmq.Consumer{
-			QueueName:    QUEUE_NAME,
-			ExchangeName: EXCHANGE_NAME,
+			QueueName:    queueName,
+			ExchangeName: exchangeName,
 		},
 		permissionService: permissionService,
 	}

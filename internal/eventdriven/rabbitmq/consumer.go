@@ -19,7 +19,7 @@ type Consumer struct {
 }
 
 func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
-	err := ch.ExchangeDeclare(
+	err := ch.ExchangeDeclarePassive(
 		c.ExchangeName,
 		"topic",
 		true,
@@ -33,7 +33,7 @@ func (c *Consumer) Declare(ctx context.Context, ch *amqp.Channel) error {
 		return err
 	}
 
-	_, err = ch.QueueDeclare(
+	_, err = ch.QueueDeclarePassive(
 		c.QueueName,
 		true,
 		false,
@@ -92,8 +92,7 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 				return amqp.ErrClosed
 			}
 
-			// log.Println(string(msg.Body))
-
+			// Handle consume
 			{
 				if err := c.Handler.Handle(ctx, msg.Body); err != nil {
 					return err

@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/config"
+	"github.com/weni-ai/flows-code-actions/internal/permission"
 )
 
 func RequireAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFunc {
@@ -23,7 +24,7 @@ func RequireAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFu
 	}
 }
 
-func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFunc {
+func ProtectEndpointWithAuthToken(conf *config.Config, permissionService permission.UserPermissionUseCase, next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if !conf.OIDC.AuthEnabled {
 			return next(c)
@@ -68,6 +69,7 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc) ec
 		//ToDo: implement permissions from here
 		//log.Println(result["email"])
 		//do next steps
+
 		return next(c)
 	}
 }

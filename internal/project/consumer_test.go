@@ -10,6 +10,7 @@ import (
 	"github.com/furdarius/rabbitroutine"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/weni-ai/flows-code-actions/internal/permission"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -23,9 +24,9 @@ func TestConsumer(t *testing.T) {
 	ch, err := conn.Channel()
 	assert.NoError(t, err)
 
-	defer ch.Close()
 	defer ch.QueueDelete(QUEUE_NAME, false, false, false)
 	defer ch.ExchangeDelete(EXCHANGE_NAME, false, false)
+	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
 		EXCHANGE_NAME,
@@ -92,7 +93,7 @@ func TestConsumer(t *testing.T) {
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/json",
-			Body:         []byte(body), //TODO: handle
+			Body:         []byte(body),
 		},
 	)
 	assert.NoError(t, err)
@@ -115,8 +116,9 @@ func TestConsumer(t *testing.T) {
 	})
 
 	projectService := NewProjectService(NewMemProjectRepository())
+	permissionService := permission.NewUserPermissionService(permission.NewMemPermissionRepository())
 
-	consumer := NewProjectConsumer(projectService)
+	consumer := NewProjectConsumer(projectService, permissionService, "", "")
 
 	conctx := context.Background()
 

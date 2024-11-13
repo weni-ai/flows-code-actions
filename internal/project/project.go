@@ -8,11 +8,15 @@ import (
 )
 
 type Project struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"id,omitempty"`
-	UUID      string             `json:"uuid"`
-	Name      string             `json:"name"`
-	CreatedAt time.Time          `json:"created_at"`
-	UpdatedAt time.Time          `json:"updated_at"`
+	ID             primitive.ObjectID `json:"_id,omitempty" bson:"id,omitempty"`
+	UUID           string             `json:"uuid"`
+	Name           string             `json:"name"`
+	Authorizations []struct {
+		UserEmail string `json:"user_email"`
+		Role      string `json:"role"`
+	} `json:"authorizations"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }
 
 func NewProject(uuid string, name string) *Project {

@@ -9,7 +9,6 @@ import (
 	"github.com/furdarius/rabbitroutine"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestConsumer(t *testing.T) {
@@ -21,9 +20,9 @@ func TestConsumer(t *testing.T) {
 	ch, err := conn.Channel()
 	assert.NoError(t, err)
 
-	defer ch.Close()
 	defer ch.QueueDelete(QUEUE_NAME, false, false, false)
 	defer ch.ExchangeDelete(EXCHANGE_NAME, false, false)
+	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
 		EXCHANGE_NAME,
@@ -92,8 +91,8 @@ func TestConsumer(t *testing.T) {
 		log.Printf("RabbitMQ error received: %v", n.Error)
 	})
 
-	permissionService := NewUserService(NewMemPermissionRepository())
-	consumer := NewPermissionConsumer(permissionService)
+	permissionService := NewUserPermissionService(NewMemPermissionRepository())
+	consumer := NewPermissionConsumer(permissionService, "", "")
 
 	conctx := context.Background()
 
@@ -119,33 +118,4 @@ func TestConsumer(t *testing.T) {
 
 	assert.NotNil(t, perm)
 	assert.Equal(t, "rafael.soares@weni.ai", perm.Email)
-}
-
-type inMemoryRepo struct {
-	permissions map[string]*UserPermission
-}
-
-func NewMemPermissionRepository() *inMemoryRepo {
-	return &inMemoryRepo{permissions: make(map[string]*UserPermission)}
-}
-
-func (r *inMemoryRepo) Create(ctx context.Context, p *UserPermission) (*UserPermission, error) {
-	p.CreatedAt = time.Now()
-	p.UpdatedAt = time.Now()
-	p.ID = primitive.NewObjectID()
-	r.permissions[p.Email] = p
-	return p, nil
-}
-
-func (r *inMemoryRepo) Find(ctx context.Context, p *UserPermission) (*UserPermission, error) {
-	return r.permissions[p.Email], nil
-}
-
-func (r *inMemoryRepo) Update(ctx context.Context, id string, p *UserPermission) (*UserPermission, error) {
-	return nil, nil
-}
-
-func (r *inMemoryRepo) Delete(ctx context.Context, userID string) error {
-	delete(r.permissions, userID)
-	return nil
 }
