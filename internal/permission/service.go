@@ -1,6 +1,8 @@
 package permission
 
-import "context"
+import (
+	"context"
+)
 
 type UserPermissionService struct {
 	repo UserPermissionRepository

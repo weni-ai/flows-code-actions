@@ -15,7 +15,6 @@ import (
 	s "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
-	permissionRepoMongo "github.com/weni-ai/flows-code-actions/internal/permission/mongodb"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -39,9 +38,6 @@ func Setup(server *s.Server) {
 
 	coderunnerService := coderunner.NewCodeRunnerService(server.Config, coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
-
-	permissionRepo := permissionRepoMongo.NewUserRepository(server.DB)
-	permissionService := permission.NewUserPermissionService(permissionRepo)
 
 	log := logrus.New()
 	server.Echo.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -74,19 +70,19 @@ func Setup(server *s.Server) {
 	server.Echo.GET("/", healthHandler.Health)
 	server.Echo.GET("/health", healthHandler.Health)
 
-	server.Echo.POST("/admin/code", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.CreateCode))
-	server.Echo.PATCH("/admin/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.UpdateCode))
-	server.Echo.POST("/code", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.CreateCode))
-	server.Echo.GET("/code", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.Find))
-	server.Echo.GET("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.Get))
-	server.Echo.PATCH("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.UpdateCode))
-	server.Echo.DELETE("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codeHandler.Delete))
+	server.Echo.POST("/admin/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.CreateCode, permission.WritePermission))
+	server.Echo.PATCH("/admin/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.UpdateCode, permission.WritePermission))
+	server.Echo.POST("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.CreateCode, permission.WritePermission))
+	server.Echo.GET("/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Find, permission.ReadPermission))
+	server.Echo.GET("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Get, permission.ReadPermission))
+	server.Echo.PATCH("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.UpdateCode, permission.WritePermission))
+	server.Echo.DELETE("/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.Delete, permission.WritePermission))
 
-	server.Echo.GET("/coderun/:id", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, coderunHandler.Get))
-	server.Echo.GET("/coderun", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, coderunHandler.Find))
+	server.Echo.GET("/coderun/:id", handlers.ProtectEndpointWithAuthToken(server.Config, coderunHandler.Get, permission.ReadPermission))
+	server.Echo.GET("/coderun", handlers.ProtectEndpointWithAuthToken(server.Config, coderunHandler.Find, permission.ReadPermission))
 
-	server.Echo.GET("/codelog/:id", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codelogHandler.Get))
-	server.Echo.GET("/codelog", handlers.ProtectEndpointWithAuthToken(server.Config, permissionService, codelogHandler.Find))
+	server.Echo.GET("/codelog/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codelogHandler.Get, permission.ReadPermission))
+	server.Echo.GET("/codelog", handlers.ProtectEndpointWithAuthToken(server.Config, codelogHandler.Find, permission.ReadPermission))
 
 	server.Echo.POST("/run/:code_id", handlers.RequireAuthToken(server.Config, coderunnerHandler.RunCode))
 	server.Echo.Any("/endpoint/:code_id", coderunnerHandler.RunEndpoint)

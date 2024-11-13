@@ -15,11 +15,11 @@ const (
 	ViewerRole      Role = Role(1)
 )
 
-type PermissionRole string
+type PermissionAccess string
 
 const (
-	ReadPermission  PermissionRole = "read"
-	WritePermission PermissionRole = "write"
+	ReadPermission  PermissionAccess = "read"
+	WritePermission PermissionAccess = "write"
 )
 
 type UserPermission struct {
@@ -40,7 +40,7 @@ func NewUserPermission(projectUUID, email string, role Role) *UserPermission {
 	}
 }
 
-func HasPermission(user *UserPermission, permission PermissionRole) bool {
+func HasPermission(user *UserPermission, permission PermissionAccess) bool {
 	if permission == ReadPermission && user.Role >= Role(1) {
 		return true
 	}

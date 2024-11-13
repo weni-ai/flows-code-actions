@@ -50,6 +50,8 @@ func Start(cfg *config.Config) {
 			permRepoMongo.NewUserRepository(db),
 		)
 
+		server.Permission = server.NewEchoPermissionHandler(permissionService)
+
 		projectConsumer := project.NewProjectConsumer(
 			project.NewProjectService(
 				projRepoMongo.NewProjectRepository(db),

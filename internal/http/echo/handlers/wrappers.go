@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/config"
+	server "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
 )
 
@@ -24,7 +26,7 @@ func RequireAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFu
 	}
 }
 
-func ProtectEndpointWithAuthToken(conf *config.Config, permissionService permission.UserPermissionUseCase, next echo.HandlerFunc) echo.HandlerFunc {
+func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, perm permission.PermissionAccess) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if !conf.OIDC.AuthEnabled {
 			return next(c)
@@ -66,10 +68,23 @@ func ProtectEndpointWithAuthToken(conf *config.Config, permissionService permiss
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal userinfo")
 		}
-		//ToDo: implement permissions from here
-		//log.Println(result["email"])
-		//do next steps
+
+		c.Set("check_permission", true)
+		c.Set("user_email", result["email"])
+		c.Set("perm", string(perm))
 
 		return next(c)
 	}
+}
+
+func CheckPermission(ctx context.Context, c echo.Context, projectUUID string) error {
+	checkPermission := c.Get("check_permission")
+	if checkPermission != nil && checkPermission.(bool) {
+		perm, ok := c.Get("perm").(permission.PermissionAccess)
+		if !ok {
+			return errors.New("invalid peremission access to check")
+		}
+		return server.CheckPermission(ctx, c, projectUUID, perm)
+	}
+	return nil
 }
