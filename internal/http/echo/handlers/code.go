@@ -160,6 +160,14 @@ func (h *CodeHandler) UpdateCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	uc, err := h.codeService.GetByID(ctx, codeID)
+	if err != nil {
+		return err
+	}
+	if err := CheckPermission(ctx, c, uc.ProjectUUID); err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
 	cd, err := h.codeService.Update(
 		ctx,
 		codeID, ca.Name, ca.Source, string(ca.Type))
@@ -169,38 +177,6 @@ func (h *CodeHandler) UpdateCode(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, cd)
-}
-
-func (h *CodeHandler) Create(c echo.Context) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	ca := new(CreateCodeActionRequest)
-	if err := c.Bind(ca); err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	t := code.CodeType(ca.Type)
-	if err := t.Validate(); err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	lang := code.LanguageType(ca.Language)
-	if err := lang.Validate(); err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	newCode, err := h.codeService.Create(
-		ctx,
-		code.NewCodeAction(ca.Name, ca.Source, lang, t, ca.URL, ca.ProjectUUID))
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	response := ParseCodeToResponse(newCode)
-	return c.JSON(http.StatusCreated, response)
 }
 
 func (h *CodeHandler) Get(c echo.Context) error {
@@ -221,6 +197,11 @@ func (h *CodeHandler) Get(c echo.Context) error {
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
+	if err := CheckPermission(ctx, c, codeAction.ProjectUUID); err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
 	response := ParseCodeToResponse(codeAction)
 	return c.JSON(http.StatusOK, response)
 }
@@ -237,6 +218,10 @@ func (h *CodeHandler) Find(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	if err := CheckPermission(ctx, c, projectUUID); err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
 	codeActions, err := h.codeService.ListProjectCodes(ctx, projectUUID, codeType)
 	if err != nil {
 		log.WithError(err).Error(err.Error())
@@ -246,33 +231,6 @@ func (h *CodeHandler) Find(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, codeActions)
-}
-
-func (h *CodeHandler) Update(c echo.Context) error {
-	codeID := c.Param("id")
-	if codeID == "" {
-		err := errors.New("valid id is required")
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	sca := new(SaveCodeActionRequest)
-	if err := c.Bind(sca); err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	cd, err := h.codeService.Update(ctx, codeID, sca.Name, sca.Source, sca.Type)
-	if err != nil {
-		err = errors.Wrap(err, "failed to save code")
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	response := ParseCodeToResponse(cd)
-	return c.JSON(http.StatusOK, response)
 }
 
 func (h *CodeHandler) Delete(c echo.Context) error {
@@ -285,7 +243,15 @@ func (h *CodeHandler) Delete(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := h.codeService.Delete(ctx, codeID)
+	uc, err := h.codeService.GetByID(ctx, codeID)
+	if err != nil {
+		return err
+	}
+	if err := CheckPermission(ctx, c, uc.ProjectUUID); err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
+	err = h.codeService.Delete(ctx, codeID)
 	if err != nil {
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())

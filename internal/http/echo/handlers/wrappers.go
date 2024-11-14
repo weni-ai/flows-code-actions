@@ -27,7 +27,7 @@ func RequireAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFu
 	}
 }
 
-func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, perm permission.PermissionAccess) echo.HandlerFunc {
+func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, requiredPermission permission.PermissionAccess) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if !conf.OIDC.AuthEnabled {
 			return next(c)
@@ -72,7 +72,7 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, pe
 
 		c.Set("check_permission", true)
 		c.Set("user_email", result["email"])
-		c.Set("perm", string(perm))
+		c.Set("perm", string(requiredPermission))
 
 		return next(c)
 	}
