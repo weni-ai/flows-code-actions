@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
@@ -30,7 +31,7 @@ func CheckPermission(ctx context.Context, c echo.Context, projectUUID string, pe
 	}
 	err := Permission.CheckPermission(ctx, c, projectUUID, permissionRole)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusForbidden, err)
 	}
 	return nil
 }
@@ -39,7 +40,7 @@ func (s *EchoPermissionHandler) CheckPermission(ctx context.Context, c echo.Cont
 	email := c.Get("user_email").(string)
 	userPermission, err := s.permissionService.Find(ctx, &permission.UserPermission{ProjectUUID: projectUUID, Email: email})
 	if err != nil {
-		return err
+		return errors.New("have'nt permission to access this resource")
 	}
 	allow := permission.HasPermission(userPermission, permissionRole)
 	if !allow {

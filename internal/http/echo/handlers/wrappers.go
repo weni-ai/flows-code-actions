@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -53,14 +54,14 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, pe
 			return errors.Wrap(err, "error on request userinfor")
 		}
 		if resp.StatusCode == 401 {
-			return errors.New("user is not authorized")
+			return echo.NewHTTPError(http.StatusUnauthorized, "not authorized")
 		}
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return errors.Wrap(err, "error on read request body")
 		}
 		if resp.StatusCode != 200 {
-			log.Println(string(body)) // log error
+			log.Info(string(body))
 			return errors.New("error on get userinfo")
 		}
 		var result map[string]interface{}
@@ -80,11 +81,11 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, pe
 func CheckPermission(ctx context.Context, c echo.Context, projectUUID string) error {
 	checkPermission := c.Get("check_permission")
 	if checkPermission != nil && checkPermission.(bool) {
-		perm, ok := c.Get("perm").(permission.PermissionAccess)
+		perm, ok := c.Get("perm").(string)
 		if !ok {
-			return errors.New("invalid peremission access to check")
+			return errors.New("invalid permission access to check")
 		}
-		return server.CheckPermission(ctx, c, projectUUID, perm)
+		return server.CheckPermission(ctx, c, projectUUID, permission.PermissionAccess(perm))
 	}
 	return nil
 }

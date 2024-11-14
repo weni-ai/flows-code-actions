@@ -85,10 +85,15 @@ func (h *CodeHandler) CreateCode(c echo.Context) error {
 
 	ca := &code.Code{}
 	qp := c.QueryParams()
+	ca.ProjectUUID = qp.Get("project_uuid")
+
+	if err := CheckPermission(ctx, c, ca.ProjectUUID); err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
 	ca.Name = qp.Get("name")
 	ca.Language = code.LanguageType(qp.Get("language"))
 	ca.Type = code.CodeType(qp.Get("type"))
-	ca.ProjectUUID = qp.Get("project_uuid")
 
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {

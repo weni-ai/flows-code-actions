@@ -3,11 +3,10 @@ package rabbitmq
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/furdarius/rabbitroutine"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type EDA struct {
@@ -34,7 +33,7 @@ func NewEDA(url string) *EDA {
 	go func() {
 		err := conn.Dial(context.Background(), url)
 		if err != nil {
-			logrus.Error("failed to establish RabbitMQ connection")
+			log.Error("failed to establish RabbitMQ connection")
 		}
 	}()
 
@@ -60,7 +59,7 @@ func (c *EDA) StartConsumers() error {
 			log.Printf("starting consumer for queue: %s", cons)
 			err := c.conn.StartConsumer(context.Background(), cons)
 			if err != nil {
-				logrus.Error(err)
+				log.Error(err)
 			}
 		}()
 	}
