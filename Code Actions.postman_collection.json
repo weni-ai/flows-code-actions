@@ -1,0 +1,126 @@
+{
+	"info": {
+		"_postman_id": "548c4592-060c-4c2d-9641-e2c9bd608045",
+		"name": "Code Actions",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "23087434"
+	},
+	"item": [
+		{
+			"name": "code",
+			"item": [
+				{
+					"name": "create code action",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"foo bar 1\",\r\n    \"type\": \"user\",\r\n    \"project_uuid\": \"815af923-6994-47b0-b460-e050f08d965a\",\r\n    \"source\": \"console.log(\\\"hello world\\\")\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/code",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"code"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get code by id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/code",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"code"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "code run",
+			"item": [
+				{
+					"name": "create code run by id",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"foo bar 1\",\r\n    \"type\": \"user\",\r\n    \"project_uuid\": \"815af923-6994-47b0-b460-e050f08d965a\",\r\n    \"source\": \"console.log(\\\"hello world\\\")\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/code",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"code"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create code run by code id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"foo bar 1\",\r\n    \"type\": \"user\",\r\n    \"project_uuid\": \"815af923-6994-47b0-b460-e050f08d965a\",\r\n    \"source\": \"console.log(\\\"hello world\\\")\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/code",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"code"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

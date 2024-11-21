@@ -1,0 +1,41 @@
+POST http://localhost:7080/realms/flows_dev_local/protocol/openid-connect/token
+content-type: application/x-www-form-urlencoded
+
+grant_type=password
+&client_id=codeactions_id
+&client_secret=k729AcTk7wyIILus6f1kM3XnSuMCtBKj
+&username=user1
+&password=12345678
+&scope=openid
+
+#####
+
+GET http://localhost:7080/realms/flows_dev_local/protocol/openid-connect/userinfo
+authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJSWG9JMzJ4cno3Y3M5bHVTazl3RC1melNWZGZXbjFQeEJnYzVuaDRhU2pNIn0.eyJleHAiOjE3MjYwMDE3NDQsImlhdCI6MTcyNjAwMTQ0NCwianRpIjoiMWE1MzgwYTgtN2Y5ZS00ZDcwLTkwZWItODI1MGYzOWNlYzEwIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo3MDgwL3JlYWxtcy9mbG93c19kZXZfbG9jYWwiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMGM0MjYwMGItMzBmOS00YmNkLTg5MGEtOTM0MGIyY2IwOTRkIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY29kZWFjdGlvbnNfaWQiLCJzaWQiOiJjN2IwODE1NS04ZWYwLTRhM2EtOTM2MS1iODg4ZjNkMjBlN2UiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIi8qIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiZGVmYXVsdC1yb2xlcy1mbG93c19kZXZfbG9jYWwiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJ1c2VyMSB1c2VyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoidXNlcjEiLCJnaXZlbl9uYW1lIjoidXNlcjEiLCJmYW1pbHlfbmFtZSI6InVzZXIiLCJlbWFpbCI6InVzZXIxQGVtYWlsLmNvbSJ9.gLB3hHHJYRnTpBZiulgV74EO6x_6snRmVPmOrnuOQQ5XB7U8r6ckHnOPtAv7_y25aO5D0QRxF_955Pd11iOQw_EqeQN3bMOrPDznAae8SgxQKhs1XuYIQ98n05DiylA4VfpWaShmTHEK5-mjdXjQxJ_FLOtutThx_9E-lRjvjRrvepffpJkdyof8tmmpMEop8-k53BmF09rSFZl7LCFwqN_hZ3vomDcwpGDmfOFRLIKHOUf4a5TBBBOMcyu-gTxySgHG43LYq3H7XIR-AhuHBJ2eLcl-O0B-eyqvTcIIc2AzDT9RHXXtpizeACADMWq5PMtfcdXhcGhGzbuXQZ6J3A
+
+######
+
+GET http://localhost:7080/realms/flows_dev_local/.well-known/uma2-configuration
+
+####
+
+GET http://localhost:8050/health
+authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJSWG9JMzJ4cno3Y3M5bHVTazl3RC1melNWZGZXbjFQeEJnYzVuaDRhU2pNIn0.eyJleHAiOjE3MjE5NjA0MDksImlhdCI6MTcyMTk2MDEwOSwianRpIjoiMmZiZjQ0MTktOGQ0NC00MTA4LTkzZGQtN2E0ODk2NGQ0MDk2IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo3MDgwL3JlYWxtcy9mbG93c19kZXZfbG9jYWwiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMGM0MjYwMGItMzBmOS00YmNkLTg5MGEtOTM0MGIyY2IwOTRkIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY29kZWFjdGlvbnNfaWQiLCJzaWQiOiI4NzM2MzUyZi01OWFlLTQxZmYtOTA0Yi1kNTU5Y2IwZjhjNTQiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIi8qIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiZGVmYXVsdC1yb2xlcy1mbG93c19kZXZfbG9jYWwiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJ1c2VyMSB1c2VyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoidXNlcjEiLCJnaXZlbl9uYW1lIjoidXNlcjEiLCJmYW1pbHlfbmFtZSI6InVzZXIiLCJlbWFpbCI6InVzZXIxQGVtYWlsLmNvbSJ9.HVM4x4T8L6lCKToU5pUxNRZCb5ox10CWNNqpjBJD4ofepZpZfddp1OFKfMSUoM4C3mnRCygq_LQQVrG4Y2CtgfhJ2qcGOgIFsqV8Hus1I-89b10eWp-ttg041F8dXtPHF4OQN9U0_HSwRN7BHMfw9WLqhVoF3TfduqGc2M4KnJNShHSMFwr6yyeBihmI3derj9KmVlRWTTIqqumkcy5jRe3KDl6Ai8JOV3rDWVw5deJZpjezuULWfidhLlFgjXZEfeugykuQcRZwthpXXPzKrGLf1dHi3ZpZhsdOktrkxGihD0Yad4QtefOq8PbAJ29In-IY5icbscxyahxfTicHbg
+
+#########
+
+
+POST http://localhost:8050/code
+Content-Type: application/json
+
+{
+    "name": "foo bar python",
+    "type": "flow",
+    "project_uuid": "815af923-6994-47b0-b460-e050f08d965a",
+    "language": "python",
+    "source": "from fastapi import FastAPI, HTTPException\nfrom fastapi.responses import JSONResponse\nimport httpx\nimport base64\nimport requests\nimport json\nfrom pydantic import BaseModel\nimport gspread\nfrom oauth2client.service_account import ServiceAccountCredentials\nimport math\n\ndef split_title_description(text, max_length):\n    words = text.split()\n    title = \"\"\n    description = \"\"\n\n    for word in words:\n        if len(title) + len(word) + 1 <= max_length:\n            if title:\n                title += \" \" + word\n            else:\n                title = word\n        else:\n            if description:\n                description += \" \" + word\n            else:\n                description = word\n    return title, description\nprint(split_title_description(\"text test to description 123\", 9))"
+}
+
+######
+
+POST http://localhost:8050/endpoint/66ad59f5a83c6d126bbd665b
