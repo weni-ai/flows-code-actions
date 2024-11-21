@@ -23,6 +23,10 @@ func NewProjectRepository(db *mongo.Database) *repo {
 func (r *repo) Create(ctx context.Context, project *project.Project) (*project.Project, error) {
 	project.CreatedAt = time.Now()
 	project.UpdatedAt = time.Now()
+	exists, _ := r.FindByUUID(ctx, project.UUID)
+	if exists != nil {
+		return nil, errors.New("project already exists")
+	}
 	result, err := r.collection.InsertOne(ctx, project)
 	if err != nil {
 		return nil, err
@@ -38,7 +42,7 @@ func (r *repo) FindByUUID(ctx context.Context, uuid string) (*project.Project, e
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
-	return p, nil
+	return p, err
 }
 
 func (r *repo) Update(ctx context.Context, project *project.Project) (*project.Project, error) {

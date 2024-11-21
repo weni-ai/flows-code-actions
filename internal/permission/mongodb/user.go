@@ -23,6 +23,10 @@ func NewUserRepository(db *mongo.Database) *userRepo {
 func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
+	exists, _ := r.Find(ctx, user)
+	if exists != nil {
+		return nil, errors.New("user permission already exists")
+	}
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
@@ -34,9 +38,6 @@ func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) 
 func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {
 	u := &permission.UserPermission{}
 	filters := bson.M{}
-	if user.Name != "" {
-		filters["name"] = user.Name
-	}
 	if user.Email != "" {
 		filters["email"] = user.Email
 	}

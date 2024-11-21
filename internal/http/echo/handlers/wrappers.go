@@ -1,16 +1,20 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/config"
+	server "github.com/weni-ai/flows-code-actions/internal/http/echo"
+	"github.com/weni-ai/flows-code-actions/internal/permission"
 )
 
 func RequireAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFunc {
@@ -23,7 +27,7 @@ func RequireAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFu
 	}
 }
 
-func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc) echo.HandlerFunc {
+func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, requiredPermission permission.PermissionAccess) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if !conf.OIDC.AuthEnabled {
 			return next(c)
@@ -50,14 +54,14 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc) ec
 			return errors.Wrap(err, "error on request userinfor")
 		}
 		if resp.StatusCode == 401 {
-			return errors.New("user is not authorized")
+			return echo.NewHTTPError(http.StatusUnauthorized, "not authorized")
 		}
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return errors.Wrap(err, "error on read request body")
 		}
 		if resp.StatusCode != 200 {
-			log.Println(string(body)) // log error
+			log.Info(string(body))
 			return errors.New("error on get userinfo")
 		}
 		var result map[string]interface{}
@@ -65,9 +69,23 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc) ec
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal userinfo")
 		}
-		//ToDo: implement permissions from here
-		//log.Println(result["email"])
-		//do next steps
+
+		c.Set("check_permission", true)
+		c.Set("user_email", result["email"])
+		c.Set("perm", string(requiredPermission))
+
 		return next(c)
 	}
+}
+
+func CheckPermission(ctx context.Context, c echo.Context, projectUUID string) error {
+	checkPermission := c.Get("check_permission")
+	if checkPermission != nil && checkPermission.(bool) {
+		perm, ok := c.Get("perm").(string)
+		if !ok {
+			return errors.New("invalid permission access to check")
+		}
+		return server.CheckPermission(ctx, c, projectUUID, permission.PermissionAccess(perm))
+	}
+	return nil
 }
