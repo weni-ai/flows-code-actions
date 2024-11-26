@@ -3,11 +3,13 @@ package permission
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/eventdriven"
 	"github.com/weni-ai/flows-code-actions/internal/eventdriven/rabbitmq"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -44,7 +46,7 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 	var evt eventdriven.PermissionEvent
 	err := json.Unmarshal(eventMsg, &evt)
 	if err != nil {
-		log.Printf("Error unmarshalling event: %v", err)
+		log.Errorf("Error unmarshalling event: %v", err)
 		return err
 	}
 
@@ -57,7 +59,7 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 		}
 	case "update":
 		finded, err := c.permissionService.Find(ctx, userPerm)
-		if err != nil {
+		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 			return err
 		}
 		if finded == nil || finded.ProjectUUID != evt.Project {
@@ -83,5 +85,7 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 	default:
 		return fmt.Errorf("invalid action: %s", evt.Action)
 	}
+	log.Infof("permission consumer handled event: %v", evt)
+
 	return nil
 }

@@ -65,5 +65,7 @@ func (c *ProjectConsumer) Handle(ctx context.Context, eventMsg []byte) error {
 			return errors.Wrapf(err, "Error creating user permission on handle event by EDA consumer for user: %v", userPerm)
 		}
 	}
+
+	log.Infof("project consumer handled event: %v", evt)
 	return nil
 }
