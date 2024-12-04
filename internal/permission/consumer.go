@@ -73,6 +73,9 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 	case "delete":
 		finded, err := c.permissionService.Find(ctx, userPerm)
 		if err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				return nil
+			}
 			return err
 		}
 		if finded.ProjectUUID == evt.Project {
