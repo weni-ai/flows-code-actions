@@ -54,7 +54,9 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 	switch evt.Action {
 	case "create":
 		if _, err := c.permissionService.Create(ctx, userPerm); err != nil {
-			return err
+			if err.Error() != "user permission already exists" {
+				return err
+			}
 		}
 	case "update":
 		finded, err := c.permissionService.Find(ctx, userPerm)
