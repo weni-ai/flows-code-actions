@@ -2,11 +2,14 @@ package rabbitmq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	log "github.com/sirupsen/logrus"
 )
+
+var ErrInvalidMsg = errors.New("invalid msg")
 
 type IConsumerHandler interface {
 	Handle(context.Context, []byte) error
@@ -94,8 +97,12 @@ func (c *Consumer) Consume(ctx context.Context, ch *amqp.Channel) error {
 
 			// Handle consume
 			{
-				if err := c.Handler.Handle(ctx, msg.Body); err != nil {
-					return err
+				err := c.Handler.Handle(ctx, msg.Body)
+				if err != nil {
+					log.WithError(err).Error(fmt.Sprintf("failed to handle %v", c.QueueName))
+					if !errors.Is(err, ErrInvalidMsg) {
+						return err
+					}
 				}
 			}
 

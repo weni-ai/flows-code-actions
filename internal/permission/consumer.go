@@ -3,9 +3,8 @@ package permission
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/eventdriven"
 	"github.com/weni-ai/flows-code-actions/internal/eventdriven/rabbitmq"
@@ -83,7 +82,7 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 		}
 		return nil
 	default:
-		return fmt.Errorf("invalid action: %s", evt.Action)
+		return errors.Wrapf(rabbitmq.ErrInvalidMsg, "action: %s, for event: %s", evt.Action, eventMsg)
 	}
 	log.Infof("permission consumer handled event: %v", evt)
 
