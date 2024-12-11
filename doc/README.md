@@ -11,7 +11,7 @@ graph LR
 
 ## Code Template
 
-Para definir um código executável pelo Code Actions, precisamos seguir um padrão onde devemo definir uma função cahamada Run que vai ter como parâmetro a engine que vai trazer para o código todo o contexto do code actions e seus principais atributos.
+To define executable code using Code Actions, we need to follow a pattern where we must define a function called Run that will have as a parameter the engine that will bring the entire context of the code actions and their main attributes to the code.
 
 Example code:
 
@@ -81,7 +81,7 @@ mycake = engine.params.get('cake')
 In addition to get, you can iterate over the params values ​​using `item()`.
 
 Example:
-```
+```python
 for item in engine.params.items():
   current_item = item
 ```
@@ -165,7 +165,7 @@ the source code of the code action as a string.
 
 ##### Response body:
 
-```
+```json
 {
     "id": "<CODE ID>",
     "name": "<CODE NAME>",
@@ -188,7 +188,7 @@ CODE_ID
 
 ##### Query String Parameters:
 
-```
+```json
 {
     "id": "<CODE ID>",
     "name": "<CODE NAME>",
@@ -206,7 +206,7 @@ the source code of the code action as a string.
 
 ##### Response body:
 
-```
+```json
 {
     "id": "<CODE ID>",
     "name": "<CODE NAME>",
@@ -222,7 +222,7 @@ the source code of the code action as a string.
 ### CodeRun
 
 Resource URL: 
-```text
+```bash
 https://code-actions.weni.ai/coderun
 ```
 
@@ -232,7 +232,7 @@ https://code-actions.weni.ai/coderun
 
 * RUN_ID
 
-```
+```bash
 https://code-actions.weni.ai/coderun/<RUN_ID>
 ```
 
@@ -242,7 +242,7 @@ returns the specified run by its id.
 
 * CODE_ID
 
-```
+```bash
 https://code-actions.weni.ai/coderun?code_id=<CODE_ID>
 ```
 Will return all runs relatetd to the specified code by its id.
@@ -255,7 +255,7 @@ Eg: `2024-12-10T00:00:00`
 
 Will return all runs relatetd to the specified code by its id, after the specified datetime.
 
-```text
+```bash
 https://code-actions.weni.ai/coderun?code_id=<CODE_ID>&after=<DATETIME>
 ```
 
@@ -266,7 +266,7 @@ Eg: `2024-12-15T00:00:00`
 
 Will return all runs relatetd to the specified code by its id, after the specified datetime.
 
-```text
+```bash
 https://code-actions.weni.ai/coderun?code_id=<CODE_ID>&before=<DATETIME>
 ```
 
@@ -275,7 +275,7 @@ https://code-actions.weni.ai/coderun?code_id=<CODE_ID>&before=<DATETIME>
 
 Resource URL: 
 
-```text
+```bash
 https://code-actions.weni.ai/codelog
 ```
 
@@ -285,7 +285,7 @@ https://code-actions.weni.ai/codelog
 
 * RUN_ID
 
-```
+```bash
 https://code-actions.weni.ai/codelog?run_id=<RUN_ID>
 ```
 returns the logs belonging to the specified run by its id.
@@ -295,7 +295,7 @@ returns the logs belonging to the specified run by its id.
 
 To execute some code action you must call the code actions endpoint with the code id in path parameter: 
 
-```
+```bash
 https://code-actions.weni.ai/action/endpoint/<CODE_ID>
 ```
 
@@ -310,7 +310,7 @@ with:
 
 we can access these query parameters inside the code as:
 
-```
+```python
 cake = engine.params.get('cake')
 juice = engine.params.get('juice')
 
