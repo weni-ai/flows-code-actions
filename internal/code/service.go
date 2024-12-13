@@ -2,8 +2,10 @@ package code
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -13,15 +15,23 @@ const maxSourecBytes = 1024 * 1024
 type Service struct {
 	repo       Repository
 	libService codelib.UseCase
+	conf       *config.Config
 }
 
-func NewCodeService(repo Repository, libService codelib.UseCase) *Service {
-	return &Service{repo: repo, libService: libService}
+func NewCodeService(conf *config.Config, repo Repository, libService codelib.UseCase) *Service {
+	return &Service{conf: conf, repo: repo, libService: libService}
 }
 
 func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 	if len(code.Source) >= maxSourecBytes {
 		return nil, errors.New("source code is too big")
+	}
+
+	blacklist := s.conf.GetBlackListTerms()
+	for _, term := range blacklist {
+		if strings.Contains(code.Source, term) {
+			return nil, errors.New("source code contains blacklisted term")
+		}
 	}
 
 	// TODO: move this lib management to another place
