@@ -4,6 +4,8 @@
 ╚  ┴─┘└─┘└┴┘└─┘  ╚═╝└─┘─┴┘└─┘  ╩ ╩└─┘ ┴ ┴└─┘┘└┘└─┘
 ```
 
+[Postman Collection](./doc/Code%20Actions.postman_collection_v3.json)
+
 [WORK IN PROGRESS]
 
 ### requirements:

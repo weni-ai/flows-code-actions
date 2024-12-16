@@ -1,0 +1,501 @@
+{
+	"info": {
+		"_postman_id": "013d7f95-aa92-4360-b17c-8ae1fea697b6",
+		"name": "Code Actions",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "23087434"
+	},
+	"item": [
+		{
+			"name": "code",
+			"item": [
+				{
+					"name": "create code action [python] -> json",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "import requests\r\nimport json\r\n\r\ndef Run(engine):\r\n    for chave, valor in engine.params.items():\r\n        engine.log.debug(f\"Param Chave: {chave}, Valor: {valor}\")\r\n        \r\n    user_id = engine.params.get(\"user_id\") #engine.params.get(\"<param_key>\")\r\n    user = consultar_usuario(user_id)\r\n\r\n    engine.log.debug(str(user))\r\n\r\n    engine.result.set(user, status_code=200, content_type=\"json\")\r\n\r\ndef consultar_usuario(user_id):\r\n\r\n  url = f\"https://jsonplaceholder.typicode.com/users/{user_id}\"\r\n  response = requests.get(url)\r\n\r\n  if response.status_code == 200:\r\n    return response.json()\r\n  else:\r\n    return None\r\n\r\n",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/code?name=foobar&language=python&type=endpoint&project_uuid={{project_uuid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"code"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "foobar"
+								},
+								{
+									"key": "language",
+									"value": "python"
+								},
+								{
+									"key": "type",
+									"value": "endpoint"
+								},
+								{
+									"key": "project_uuid",
+									"value": "{{project_uuid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upddate code action [python] -> json",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "import requests\r\nimport json\r\n\r\ndef Run(engine):\r\n    for chave, valor in engine.params.items():\r\n        engine.log.debug(f\"Param Chave: {chave}, Valor: {valor}\")\r\n        \r\n    user_id = engine.params.get(\"user_id\") #engine.params.get(\"<param_key>\")\r\n    user = consultar_usuario(user_id)\r\n\r\n    engine.log.debug(str(user))\r\n\r\n    engine.result.set(user, status_code=200, content_type=\"json\")\r\n\r\ndef consultar_usuario(user_id):\r\n\r\n  url = f\"https://jsonplaceholder.typicode.com/users/{user_id}\"\r\n  response = requests.get(url)\r\n\r\n  if response.status_code == 200:\r\n    return response.json()\r\n  else:\r\n    return None\r\n\r\n",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/code/CODE_ID?name=foobar&language=python&type=endpoint&project_uuid={{project_uuid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"code",
+								"CODE_ID"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "foobar"
+								},
+								{
+									"key": "language",
+									"value": "python"
+								},
+								{
+									"key": "type",
+									"value": "endpoint"
+								},
+								{
+									"key": "project_uuid",
+									"value": "{{project_uuid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create code action [python] -> html",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "\r\ndef Run(engine):\r\n    \r\n    html_content = \"\"\"\r\n    <html>   \r\n        <head>\r\n            <title>Exemplo HTML</title>\r\n            <style>\r\n                \r\n            </style>\r\n            <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css\" rel=\"stylesheet\" integrity=\"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH\" crossorigin=\"anonymous\">\r\n        </head>\r\n        <body class=\"bg-dark\">\r\n            <script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js\" integrity=\"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz\" crossorigin=\"anonymous\"></script>\r\n            \r\n            <div class=\"container\">\r\n                <div class=\"row justify-content-center text-center\">\r\n                    <div col-md-12>\r\n                        <h1 class=\"text-white\">Example heading <span class=\"badge text-bg-secondary\">New</span></h1>\r\n                    </div>\r\n                </div>\r\n                <br>\r\n                \r\n                <div class=\"row justify-content-center\">\r\n                    <div class=\"col-md-6\">\r\n                        <div class=\"accordion\" id=\"accordionExample\">\r\n                            <div class=\"accordion-item primary bg-dark text-white\">\r\n                                <h2 class=\"accordion-header\">\r\n                                <button class=\"accordion-button\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseOne\" aria-expanded=\"true\" aria-controls=\"collapseOne\">\r\n                                    Accordion Item #1\r\n                                </button>\r\n                                </h2>\r\n                                <div id=\"collapseOne\" class=\"accordion-collapse collapse show\" data-bs-parent=\"#accordionExample\">\r\n                                <div class=\"accordion-body\">\r\n                                    <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.\r\n                                </div>\r\n                                </div>\r\n                            </div>\r\n                            <div class=\"accordion-item\">\r\n                                <h2 class=\"accordion-header\">\r\n                                <button class=\"accordion-button collapsed\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseTwo\" aria-expanded=\"false\" aria-controls=\"collapseTwo\">\r\n                                    Accordion Item #2\r\n                                </button>\r\n                                </h2>\r\n                                <div id=\"collapseTwo\" class=\"accordion-collapse collapse\" data-bs-parent=\"#accordionExample\">\r\n                                <div class=\"accordion-body\">\r\n                                    <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.\r\n                                </div>\r\n                                </div>\r\n                            </div>\r\n                            <div class=\"accordion-item\">\r\n                                <h2 class=\"accordion-header\">\r\n                                <button class=\"accordion-button collapsed\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseThree\" aria-expanded=\"false\" aria-controls=\"collapseThree\">\r\n                                    Accordion Item #3\r\n                                </button>\r\n                                </h2>\r\n                                <div id=\"collapseThree\" class=\"accordion-collapse collapse\" data-bs-parent=\"#accordionExample\">\r\n                                <div class=\"accordion-body\">\r\n                                    <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.\r\n                                </div>\r\n                                </div>\r\n                            </div>\r\n                        </div>\r\n                        <br>\r\n                    </div>\r\n                </div>\r\n                \r\n                <div class=\"row justify-content-center\">\r\n                    <div class=\"col-md-6 bg-dark\">\r\n                        <button type=\"button\" class=\"btn btn-primary\" data-bs-toggle=\"modal\" data-bs-target=\"#exampleModal\">\r\n                    Launch demo modal\r\n                    </button>\r\n\r\n                    <!-- Modal -->\r\n                    <div class=\"modal fade\" id=\"exampleModal\" tabindex=\"-1\" aria-labelledby=\"exampleModalLabel\" aria-hidden=\"true\">\r\n                    <div class=\"modal-dialog\">\r\n                        <div class=\"modal-content\">\r\n                        <div class=\"modal-header\">\r\n                            <h1 class=\"modal-title fs-5\" id=\"exampleModalLabel\">Modal title</h1>\r\n                            <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\" aria-label=\"Close\"></button>\r\n                        </div>\r\n                        <div class=\"modal-body\">\r\n                            ...\r\n                        </div>\r\n                        <div class=\"modal-footer\">\r\n                            <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Cancel</button>\r\n                            <button type=\"button\" class=\"btn btn-primary\">OK</button>\r\n                        </div>\r\n                        </div>\r\n                    </div>\r\n                    </div>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n        </body>\r\n    </html>\r\n    \"\"\"\r\n    engine.result.set(html_content, status_code=200, content_type=\"html\")\r\n",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/code?name=foobar&language=python&type=endpoint&project_uuid={{project_uuid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"code"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "foobar"
+								},
+								{
+									"key": "language",
+									"value": "python"
+								},
+								{
+									"key": "type",
+									"value": "endpoint"
+								},
+								{
+									"key": "project_uuid",
+									"value": "{{project_uuid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update code action [python] -> html",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "\r\ndef Run(engine):\r\n    \r\n    html_content = \"\"\"\r\n    <html>   \r\n        <head>\r\n            <title>Exemplo HTML</title>\r\n            <style>\r\n                \r\n            </style>\r\n            <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css\" rel=\"stylesheet\" integrity=\"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH\" crossorigin=\"anonymous\">\r\n        </head>\r\n        <body class=\"bg-dark\">\r\n            <script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js\" integrity=\"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz\" crossorigin=\"anonymous\"></script>\r\n            \r\n            <div class=\"container\">\r\n                <div class=\"row justify-content-center text-center\">\r\n                    <div col-md-12>\r\n                        <h1 class=\"text-white\">Example heading <span class=\"badge text-bg-secondary\">New</span></h1>\r\n                    </div>\r\n                </div>\r\n                <br>\r\n                \r\n                <div class=\"row justify-content-center\">\r\n                    <div class=\"col-md-6\">\r\n                        <div class=\"accordion\" id=\"accordionExample\">\r\n                            <div class=\"accordion-item primary bg-dark text-white\">\r\n                                <h2 class=\"accordion-header\">\r\n                                <button class=\"accordion-button\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseOne\" aria-expanded=\"true\" aria-controls=\"collapseOne\">\r\n                                    Accordion Item #1\r\n                                </button>\r\n                                </h2>\r\n                                <div id=\"collapseOne\" class=\"accordion-collapse collapse show\" data-bs-parent=\"#accordionExample\">\r\n                                <div class=\"accordion-body\">\r\n                                    <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.\r\n                                </div>\r\n                                </div>\r\n                            </div>\r\n                            <div class=\"accordion-item\">\r\n                                <h2 class=\"accordion-header\">\r\n                                <button class=\"accordion-button collapsed\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseTwo\" aria-expanded=\"false\" aria-controls=\"collapseTwo\">\r\n                                    Accordion Item #2\r\n                                </button>\r\n                                </h2>\r\n                                <div id=\"collapseTwo\" class=\"accordion-collapse collapse\" data-bs-parent=\"#accordionExample\">\r\n                                <div class=\"accordion-body\">\r\n                                    <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.\r\n                                </div>\r\n                                </div>\r\n                            </div>\r\n                            <div class=\"accordion-item\">\r\n                                <h2 class=\"accordion-header\">\r\n                                <button class=\"accordion-button collapsed\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapseThree\" aria-expanded=\"false\" aria-controls=\"collapseThree\">\r\n                                    Accordion Item #3\r\n                                </button>\r\n                                </h2>\r\n                                <div id=\"collapseThree\" class=\"accordion-collapse collapse\" data-bs-parent=\"#accordionExample\">\r\n                                <div class=\"accordion-body\">\r\n                                    <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.\r\n                                </div>\r\n                                </div>\r\n                            </div>\r\n                        </div>\r\n                        <br>\r\n                    </div>\r\n                </div>\r\n                \r\n                <div class=\"row justify-content-center\">\r\n                    <div class=\"col-md-6 bg-dark\">\r\n                        <button type=\"button\" class=\"btn btn-primary\" data-bs-toggle=\"modal\" data-bs-target=\"#exampleModal\">\r\n                    Launch demo modal\r\n                    </button>\r\n\r\n                    <!-- Modal -->\r\n                    <div class=\"modal fade\" id=\"exampleModal\" tabindex=\"-1\" aria-labelledby=\"exampleModalLabel\" aria-hidden=\"true\">\r\n                    <div class=\"modal-dialog\">\r\n                        <div class=\"modal-content\">\r\n                        <div class=\"modal-header\">\r\n                            <h1 class=\"modal-title fs-5\" id=\"exampleModalLabel\">Modal title</h1>\r\n                            <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\" aria-label=\"Close\"></button>\r\n                        </div>\r\n                        <div class=\"modal-body\">\r\n                            ...\r\n                        </div>\r\n                        <div class=\"modal-footer\">\r\n                            <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Cancel</button>\r\n                            <button type=\"button\" class=\"btn btn-primary\">OK</button>\r\n                        </div>\r\n                        </div>\r\n                    </div>\r\n                    </div>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n        </body>\r\n    </html>\r\n    \"\"\"\r\n    engine.result.set(html_content, status_code=200, content_type=\"html\")\r\n",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/code/CODE_ID?name=foobar&language=python&type=endpoint&project_uuid={{project_uuid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"code",
+								"CODE_ID"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "foobar"
+								},
+								{
+									"key": "language",
+									"value": "python"
+								},
+								{
+									"key": "type",
+									"value": "endpoint"
+								},
+								{
+									"key": "project_uuid",
+									"value": "{{project_uuid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get code by id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"foo bar 1\",\r\n    \"type\": \"user\",\r\n    \"project_uuid\": \"815af923-6994-47b0-b460-e050f08d965a\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/code/66b4d267bb5739e53e4fa37d",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"code",
+								"66b4d267bb5739e53e4fa37d"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get code by  project uuid",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/code?project_uuid=715af923-6994-47b0-b460-e050f08d965b",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"code"
+							],
+							"query": [
+								{
+									"key": "project_uuid",
+									"value": "715af923-6994-47b0-b460-e050f08d965b"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete code",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/code/6605d977249286199fb4cc1c",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"code",
+								"6605d977249286199fb4cc1c"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "code run",
+			"item": [
+				{
+					"name": "get code run by id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"foo bar 1\",\r\n    \"type\": \"user\",\r\n    \"project_uuid\": \"815af923-6994-47b0-b460-e050f08d965a\",\r\n    \"source\": \"console.log(\\\"hello world\\\")\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/coderun/66b4d267bb5739e53e4fa37d",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coderun",
+								"66b4d267bb5739e53e4fa37d"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get code run by code id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/coderun?code_id=66ba1e88e9ecedc868b42376",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coderun"
+							],
+							"query": [
+								{
+									"key": "code_id",
+									"value": "66ba1e88e9ecedc868b42376"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get code run by code id with filters",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/coderun?code_id=66ba1e88e9ecedc868b42376&after=2024-01-01T00:00:00&before=2024-12-12T23:59:59",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"coderun"
+							],
+							"query": [
+								{
+									"key": "code_id",
+									"value": "66ba1e88e9ecedc868b42376"
+								},
+								{
+									"key": "after",
+									"value": "2024-01-01T00:00:00"
+								},
+								{
+									"key": "before",
+									"value": "2024-12-12T23:59:59"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "run code",
+			"item": [
+				{
+					"name": "endpoint",
+					"item": [
+						{
+							"name": "run code [Python]",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/action/endpoint/CODE_ID?user_id=1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"action",
+										"endpoint",
+										"CODE_ID"
+									],
+									"query": [
+										{
+											"key": "user_id",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "code log",
+			"item": [
+				{
+					"name": "get logs by run_id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/codelog?run_id=66ba1e9d6213e32a9e6d41ed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"codelog"
+							],
+							"query": [
+								{
+									"key": "run_id",
+									"value": "66ba1e9d6213e32a9e6d41ed"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					"const requestToken = {",
+					"    url: 'https://accounts.weni.ai/auth/realms/weni/protocol/openid-connect/token',",
+					"    method: 'POST',",
+					"    header: {",
+					"        'content-type': 'application/x-www-form-urlencoded',",
+					"    },",
+					"    body: {",
+					"        mode: 'urlencoded',",
+					"        urlencoded: [",
+					"            { key:\"username\", value: pm.collectionVariables.get(\"username\")},",
+					"            { key:\"password\", value: pm.collectionVariables.get(\"password\")},",
+					"            { key:\"grant_type\", value: \"password\"},",
+					"            { key:\"client_id\", value: \"weni-webapp\"},",
+					"            { key:\"scope\", value: \"openid\"}",
+					"        ]",
+					"    }",
+					"};",
+					"",
+					"pm.sendRequest(requestToken, function(err, response) {",
+					"    var data = response.json();",
+					"    console.log(data)",
+					"    pm.collectionVariables.set(\"access_token\", data.access_token)",
+					"});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://code-actions.weni.ai",
+			"type": "string"
+		},
+		{
+			"key": "username",
+			"value": "<USER_EMAIL>",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "<PASSWORD>",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "project_uuid",
+			"value": "<PROJECT_UUID>",
+			"type": "string"
+		}
+	]
+}
