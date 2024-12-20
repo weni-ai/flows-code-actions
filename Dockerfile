@@ -14,7 +14,9 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 
 FROM alpine:3.18.4
 
-RUN apk add --no-cache python3 py3-pip ffmpeg
+RUN apk add --no-cache python3 python3-dev py3-pip ffmpeg postgresql-dev libpq libpq-dev build-base
+RUN pip install psycopg2
+RUN pip install psycopg2-binary
 RUN pip install pymongo
 
 ENV APP_USER=app \

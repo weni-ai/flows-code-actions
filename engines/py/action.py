@@ -2,24 +2,19 @@ import requests
 import json
 
 def Run(engine):
-    for chave, valor in engine.params.items():
-        print(f"Chave: {chave}, Valor: {valor}")
+    for chave, valor in engine.params.items(): # iterates over query string parameters
+        print(f"key: {chave}, value: {valor}")
         
-    user_id = engine.params.get("user_id") #engine.params.get("<param_key>")
-    usuario = consultar_usuario(user_id)
+    user_id = engine.params.get("user_id") # to get user_id query string param: engine.params.get("<param_key>")
+    user = get_user(user_id)
 
-    if usuario:
-        print(usuario)
-    else:
-        print("Usuário não encontrado.")
+    if user:
+        engine.result.set(user, conten_type="json")
+        return # return to finish action execution
     
-    print("\n")
-    print(engine.body)
-    # engine.result.set(json.dumps(usuario))
-    engine.log.debug(usuario)
-    engine.result.set(usuario)
+    engine.result.set({"message": "user not found."}, content_type="json")
 
-def consultar_usuario(user_id):
+def get_user(user_id):
 
   url = f"https://jsonplaceholder.typicode.com/users/{user_id}"
   response = requests.get(url)
@@ -28,4 +23,3 @@ def consultar_usuario(user_id):
     return response.text
   else:
     return None
-
