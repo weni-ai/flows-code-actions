@@ -74,6 +74,17 @@ func (s *Service) ListProjectCodes(ctx context.Context, projectUUID string, code
 }
 
 func (s *Service) Update(ctx context.Context, id string, name string, source string, codeType string) (*Code, error) {
+	if len(source) >= maxSourecBytes {
+		return nil, errors.New("source code is too big")
+	}
+
+	blacklist := s.conf.GetBlackListTerms()
+	for _, term := range blacklist {
+		if strings.Contains(source, term) {
+			return nil, errors.New("source code contains blacklisted term")
+		}
+	}
+
 	code, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -84,6 +95,7 @@ func (s *Service) Update(ctx context.Context, id string, name string, source str
 	if source != "" {
 		code.Source = source
 	}
+
 	if codeType != "" {
 		t := CodeType(codeType)
 		if err := t.Validate(); err != nil {
