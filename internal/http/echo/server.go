@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 )
 
@@ -53,6 +54,7 @@ type Server struct {
 	Echo   *echo.Echo
 	Config *config.Config
 	DB     *mongo.Database
+	Redis  *redis.Client
 }
 
 func NewServer(cfg *config.Config) *Server {
