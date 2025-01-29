@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/bsm/redislock"
+	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
@@ -31,6 +33,17 @@ func Start(cfg *config.Config) {
 	codeactions.DB = db
 
 	routes.Setup(codeactions)
+
+	redisOpt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	redisClient := redis.NewClient(redisOpt)
+	locker := redislock.New(redisClient)
+
+	codeactions.Locker = locker
+
+	codeactions.StartCodeLogCleaner(context.Background())
 
 	if err := SetupLibs(codeactions); err != nil {
 		log.WithError(err).Fatal(err)

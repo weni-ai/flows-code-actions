@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -9,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type codelogRepo struct {
@@ -94,4 +96,39 @@ func (r *codelogRepo) Delete(ctx context.Context, id string) error {
 	}
 	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": codelogID})
 	return err
+}
+
+func (r *codelogRepo) DeleteOlder(ctx context.Context, date time.Time, limit int64) (int64, error) {
+
+	qry := bson.M{
+		"created_at": bson.M{"$lt": date},
+	}
+
+	options := &options.FindOptions{Limit: &limit}
+	cursor, err := r.collection.Find(ctx, qry, options)
+	if err != nil {
+		return 0, fmt.Errorf("find failed: %v", err)
+	}
+	defer cursor.Close(ctx)
+	logs := []codelog.CodeLog{}
+	for cursor.Next(ctx) {
+		var log codelog.CodeLog
+		if err = cursor.Decode(&log); err != nil {
+			return 0, fmt.Errorf("failed to parse log from cursor: %v", err)
+		}
+		logs = append(logs, log)
+	}
+
+	if len(logs) > 0 {
+		ids := make([]primitive.ObjectID, len(logs))
+		for i, log := range logs {
+			ids[i] = log.ID
+		}
+		result, err := r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
+		if err != nil {
+			return 0, fmt.Errorf("failed to delete logs: %v", err)
+		}
+		return result.DeletedCount, nil
+	}
+	return 0, nil
 }

@@ -15,6 +15,7 @@ type Config struct {
 	SentryDSN          string
 	ResourceManagement ResourceConfig
 	EDA                EDAConfig
+	RedisURL           string
 }
 
 type HTTPConfig struct {
@@ -71,6 +72,7 @@ func NewConfig() *Config {
 		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
 		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
 		EDA:         LoadEDAConfig(),
+		RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
 	}
 }
 

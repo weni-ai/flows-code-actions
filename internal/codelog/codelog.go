@@ -34,6 +34,7 @@ type UseCase interface {
 	ListRunLogs(ctx context.Context, runID string) ([]CodeLog, error)
 	Update(ctx context.Context, id string, Content string) (*CodeLog, error)
 	Delete(ctx context.Context, id string) error
+	StartCodeLogCleaner() error
 }
 
 func NewCodeLog(runID string, codeID string, logType LogType, content string) *CodeLog {

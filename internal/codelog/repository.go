@@ -1,6 +1,9 @@
 package codelog
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Repository interface {
 	Create(context.Context, *CodeLog) (*CodeLog, error)
@@ -8,4 +11,5 @@ type Repository interface {
 	ListRunLogs(context.Context, string) ([]CodeLog, error)
 	Update(context.Context, string, string) (*CodeLog, error)
 	Delete(context.Context, string) error
+	DeleteOlder(context.Context, time.Time, int64) (int64, error)
 }

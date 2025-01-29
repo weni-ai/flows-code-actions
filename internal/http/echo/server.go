@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/bsm/redislock"
 	"github.com/weni-ai/flows-code-actions/config"
+	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -50,15 +53,22 @@ func (s *EchoPermissionHandler) CheckPermission(ctx context.Context, c echo.Cont
 }
 
 type Server struct {
-	Echo   *echo.Echo
-	Config *config.Config
-	DB     *mongo.Database
+	Echo     *echo.Echo
+	Config   *config.Config
+	DB       *mongo.Database
+	Locker   *redislock.Client
+	Services *Services
+}
+
+type Services struct {
+	CodeLogService codelog.UseCase
 }
 
 func NewServer(cfg *config.Config) *Server {
 	return &Server{
-		Echo:   echo.New(),
-		Config: cfg,
+		Echo:     echo.New(),
+		Config:   cfg,
+		Services: &Services{},
 	}
 }
 
@@ -68,4 +78,21 @@ func (server *Server) Start(addr string) error {
 
 func (server *Server) Stop(ctx context.Context) error {
 	return server.Echo.Shutdown(ctx)
+}
+
+var minIntervalLock = time.Hour * 1
+
+func (server *Server) StartCodeLogCleaner(ctx context.Context) error {
+	taskkey := "codelogcleaner"
+	lock, err := server.Locker.Obtain(ctx, taskkey, minIntervalLock, nil)
+	if err != nil {
+		log.Println("already has lock for ", taskkey)
+		return nil
+	}
+	defer lock.Release(ctx)
+	err = server.Services.CodeLogService.StartCodeLogCleaner()
+	if err != nil {
+		return err
+	}
+	return nil
 }
