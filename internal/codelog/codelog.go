@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/weni-ai/flows-code-actions/config"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -34,7 +35,7 @@ type UseCase interface {
 	ListRunLogs(ctx context.Context, runID string) ([]CodeLog, error)
 	Update(ctx context.Context, id string, Content string) (*CodeLog, error)
 	Delete(ctx context.Context, id string) error
-	StartCodeLogCleaner() error
+	StartCodeLogCleaner(*config.Config) error
 }
 
 func NewCodeLog(runID string, codeID string, logType LogType, content string) *CodeLog {

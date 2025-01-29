@@ -82,15 +82,14 @@ func (server *Server) Stop(ctx context.Context) error {
 
 var minIntervalLock = time.Hour * 1
 
-func (server *Server) StartCodeLogCleaner(ctx context.Context) error {
+func (server *Server) StartCodeLogCleaner(ctx context.Context, cfg *config.Config) error {
 	taskkey := "codelogcleaner"
-	lock, err := server.Locker.Obtain(ctx, taskkey, minIntervalLock, nil)
+	_, err := server.Locker.Obtain(ctx, taskkey, minIntervalLock, nil)
 	if err != nil {
 		log.Println("already has lock for ", taskkey)
 		return nil
 	}
-	defer lock.Release(ctx)
-	err = server.Services.CodeLogService.StartCodeLogCleaner()
+	err = server.Services.CodeLogService.StartCodeLogCleaner(cfg)
 	if err != nil {
 		return err
 	}

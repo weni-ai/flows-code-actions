@@ -43,7 +43,7 @@ func Start(cfg *config.Config) {
 
 	codeactions.Locker = locker
 
-	codeactions.StartCodeLogCleaner(context.Background())
+	codeactions.StartCodeLogCleaner(context.Background(), cfg)
 
 	if err := SetupLibs(codeactions); err != nil {
 		log.WithError(err).Fatal(err)
