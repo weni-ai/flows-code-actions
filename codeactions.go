@@ -43,8 +43,6 @@ func Start(cfg *config.Config) {
 
 	codeactions.Locker = locker
 
-	codeactions.StartCodeLogCleaner(context.Background(), cfg)
-
 	if err := SetupLibs(codeactions); err != nil {
 		log.WithError(err).Fatal(err)
 	}
@@ -85,6 +83,9 @@ func Start(cfg *config.Config) {
 			log.WithError(err)
 		}
 	}
+
+	codeactions.StartCodeLogCleaner(context.TODO(), cfg)
+	codeactions.StartCodeRunCleaner(context.TODO(), cfg)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)

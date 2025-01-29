@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -9,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type codeRunRepo struct {
@@ -106,4 +108,36 @@ func (r *codeRunRepo) Delete(ctx context.Context, id string) error {
 	}
 	_, err = r.collection.DeleteOne(context.Background(), bson.M{"_id": coderunID})
 	return err
+}
+
+func (r *codeRunRepo) DeleteOlder(ctx context.Context, date time.Time, limit int64) (int64, error) {
+	qry := bson.M{
+		"created_at": bson.M{"$lt": date},
+	}
+	options := &options.FindOptions{Limit: &limit}
+	cursor, err := r.collection.Find(ctx, qry, options)
+	if err != nil {
+		return 0, fmt.Errorf("find failed: %v", err)
+	}
+	defer cursor.Close(ctx)
+	runs := []coderun.CodeRun{}
+	for cursor.Next(ctx) {
+		var run coderun.CodeRun
+		if err := cursor.Decode(&run); err != nil {
+			return 0, err
+		}
+		runs = append(runs, run)
+	}
+	if len(runs) > 0 {
+		ids := make([]primitive.ObjectID, len(runs))
+		for i, run := range runs {
+			ids[i] = run.ID
+		}
+		res, err := r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
+		if err != nil {
+			return 0, fmt.Errorf("failed to delete runs: %v", err)
+		}
+		return res.DeletedCount, nil
+	}
+	return 0, nil
 }

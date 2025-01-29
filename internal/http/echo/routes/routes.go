@@ -37,6 +37,7 @@ func Setup(server *s.Server) {
 	codelogHandler := handlers.NewCodeLogHandler(codelogService)
 
 	server.Services.CodeLogService = codelogService
+	server.Services.CodeRunService = coderunService
 
 	coderunnerService := coderunner.NewCodeRunnerService(server.Config, coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)

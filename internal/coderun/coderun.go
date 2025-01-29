@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/weni-ai/flows-code-actions/config"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -40,6 +41,7 @@ type UseCase interface {
 	ListByCodeID(ctx context.Context, codeID string, filter map[string]interface{}) ([]CodeRun, error)
 	Update(ctx context.Context, codeRunID string, codeRun *CodeRun) (*CodeRun, error)
 	Delete(ctx context.Context, id string) error
+	StartCodeRunCleaner(cfg *config.Config) error
 }
 
 func NewCodeRun(codeID string, status CodeRunStatus) *CodeRun {
