@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -139,6 +140,8 @@ func (h *CodeHandler) UpdateCode(c echo.Context) error {
 	qp := c.QueryParams()
 	ca.Name = qp.Get("name")
 	ca.Language = code.LanguageType(qp.Get("language"))
+	timeout, _ := strconv.Atoi(qp.Get("timeout"))
+	ca.Timeout = timeout
 	ca.Type = code.CodeType(qp.Get("type"))
 
 	body, err := io.ReadAll(c.Request().Body)
@@ -170,7 +173,7 @@ func (h *CodeHandler) UpdateCode(c echo.Context) error {
 
 	cd, err := h.codeService.Update(
 		ctx,
-		codeID, ca.Name, ca.Source, string(ca.Type))
+		codeID, ca.Name, ca.Source, string(ca.Type), ca.Timeout)
 	if err != nil {
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
