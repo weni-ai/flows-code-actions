@@ -67,6 +67,8 @@ func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 		}
 	}
 
+	code.SetTimeout(code.Timeout)
+
 	return s.repo.Create(ctx, code)
 }
 
@@ -78,7 +80,7 @@ func (s *Service) ListProjectCodes(ctx context.Context, projectUUID string, code
 	return s.repo.ListByProjectUUID(ctx, projectUUID, codeType)
 }
 
-func (s *Service) Update(ctx context.Context, id string, name string, source string, codeType string) (*Code, error) {
+func (s *Service) Update(ctx context.Context, id string, name string, source string, codeType string, timeout int) (*Code, error) {
 	if len(source) >= maxSourecBytes {
 		return nil, errors.New("source code is too big")
 	}
@@ -112,6 +114,10 @@ func (s *Service) Update(ctx context.Context, id string, name string, source str
 		}
 		code.Type = t
 	}
+	if timeout > 0 {
+		code.SetTimeout(timeout)
+	}
+
 	return s.repo.Update(ctx, id, code)
 }
 
