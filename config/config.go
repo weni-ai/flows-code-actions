@@ -2,7 +2,9 @@ package config
 
 import (
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -15,6 +17,7 @@ type Config struct {
 	SentryDSN          string
 	ResourceManagement ResourceConfig
 	EDA                EDAConfig
+	Blacklist          string
 }
 
 type HTTPConfig struct {
@@ -71,6 +74,7 @@ func NewConfig() *Config {
 		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
 		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
 		EDA:         LoadEDAConfig(),
+		Blacklist:   Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 	}
 }
 
@@ -161,4 +165,16 @@ func Getenv(key string, defval string) string {
 		return defval
 	}
 	return val
+}
+
+func (c *Config) GetBlackListTerms() []string {
+	var blackListTerms []string
+	blacklist := strings.Split(c.Blacklist, ",")
+	for _, term := range blacklist {
+		if term != "" {
+			blackListTerms = append(blackListTerms, strings.TrimSpace(term))
+		}
+	}
+	sort.Strings(blackListTerms)
+	return blackListTerms
 }

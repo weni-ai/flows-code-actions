@@ -91,7 +91,7 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 	defer os.RemoveAll(tempDir)
 
 	//TODO: figure out how to handle temporary files dir
-	currentDir := "/home/rafael/weni/weni-ai/codeactions"
+	currentDir := "/home/rafaelsoares/weni/weni-ai/codeactions"
 	if environment != "local" {
 		currentDir = "/app"
 	}
