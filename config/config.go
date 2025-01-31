@@ -2,7 +2,9 @@ package config
 
 import (
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -17,6 +19,7 @@ type Config struct {
 	EDA                EDAConfig
 	RedisURL           string
 	Cleaner            CleanerConfig
+  Blacklist          string
 }
 
 type CleanerConfig struct {
@@ -80,6 +83,7 @@ func NewConfig() *Config {
 		EDA:         LoadEDAConfig(),
 		RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
 		Cleaner:     NewCleanerConfig(),
+		Blacklist:   Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 	}
 }
 
@@ -179,4 +183,16 @@ func Getenv(key string, defval string) string {
 		return defval
 	}
 	return val
+}
+
+func (c *Config) GetBlackListTerms() []string {
+	var blackListTerms []string
+	blacklist := strings.Split(c.Blacklist, ",")
+	for _, term := range blacklist {
+		if term != "" {
+			blackListTerms = append(blackListTerms, strings.TrimSpace(term))
+		}
+	}
+	sort.Strings(blackListTerms)
+	return blackListTerms
 }

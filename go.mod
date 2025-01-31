@@ -10,6 +10,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.2
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/sirupsen/logrus v1.9.3
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
@@ -44,7 +45,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/stretchr/testify v1.9.0
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.mongodb.org/mongo-driver v1.14.0
