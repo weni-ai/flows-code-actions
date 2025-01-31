@@ -4,8 +4,12 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/bsm/redislock"
 	"github.com/weni-ai/flows-code-actions/config"
+	"github.com/weni-ai/flows-code-actions/internal/codelog"
+	"github.com/weni-ai/flows-code-actions/internal/coderun"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -54,13 +58,24 @@ type Server struct {
 	Echo   *echo.Echo
 	Config *config.Config
 	DB     *mongo.Database
+	Echo     *echo.Echo
+	Config   *config.Config
+	DB       *mongo.Database
 	Redis  *redis.Client
+	Locker   *redislock.Client
+	Services *Services
+}
+
+type Services struct {
+	CodeLogService codelog.UseCase
+	CodeRunService coderun.UseCase
 }
 
 func NewServer(cfg *config.Config) *Server {
 	return &Server{
-		Echo:   echo.New(),
-		Config: cfg,
+		Echo:     echo.New(),
+		Config:   cfg,
+		Services: &Services{},
 	}
 }
 
@@ -70,4 +85,34 @@ func (server *Server) Start(addr string) error {
 
 func (server *Server) Stop(ctx context.Context) error {
 	return server.Echo.Shutdown(ctx)
+}
+
+var minIntervalLock = time.Hour * 1
+
+func (server *Server) StartCodeLogCleaner(ctx context.Context, cfg *config.Config) error {
+	taskkey := "codelogcleaner"
+	_, err := server.Locker.Obtain(ctx, taskkey, minIntervalLock, nil)
+	if err != nil {
+		log.Println("already has lock for ", taskkey)
+		return nil
+	}
+	err = server.Services.CodeLogService.StartCodeLogCleaner(cfg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (server *Server) StartCodeRunCleaner(ctx context.Context, cfg *config.Config) error {
+	taskkey := "coderuncleaner"
+	_, err := server.Locker.Obtain(ctx, taskkey, minIntervalLock, nil)
+	if err != nil {
+		log.Println("already has lock for ", taskkey)
+		return nil
+	}
+	err = server.Services.CodeRunService.StartCodeRunCleaner(cfg)
+	if err != nil {
+		return err
+	}
+	return nil
 }

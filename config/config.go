@@ -2,7 +2,9 @@ package config
 
 import (
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -17,11 +19,19 @@ type Config struct {
 	EDA                EDAConfig
 	Redis              string
 	RateLimiterCode    RateLimiterConfig
+	Cleaner            CleanerConfig
+  Blacklist          string
 }
 
 type RateLimiterConfig struct {
 	MaxRequests int
 	Window      int
+	RedisURL           string
+}
+
+type CleanerConfig struct {
+	ScheduleTime    string
+	RetentionPeriod string
 }
 
 type HTTPConfig struct {
@@ -80,6 +90,8 @@ func NewConfig() *Config {
 		EDA:             LoadEDAConfig(),
 		Redis:           Getenv("FLOWS_CODE_ACTIONS_REDIS", "redis://localhost:6379/10"),
 		RateLimiterCode: LoadRateLimiterCodeConfig(),
+		Cleaner:     NewCleanerConfig(),
+		Blacklist:   Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 	}
 }
 
@@ -95,6 +107,16 @@ func LoadRateLimiterCodeConfig() RateLimiterConfig {
 	return RateLimiterConfig{
 		MaxRequests: maxRequests,
 		Window:      window,
+    RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
+	}
+}
+
+func NewCleanerConfig() CleanerConfig {
+	scheduleTime := Getenv("FLOWS_CODE_ACTIONS_CLEANER_SCHEDULE_TIME", "01:00")
+	retentionPeriod := Getenv("FLOWS_CODE_ACTIONS_CLEANER_RETENTION_PERIOD", "30")
+	return CleanerConfig{
+		ScheduleTime:    scheduleTime,
+		RetentionPeriod: retentionPeriod,
 	}
 }
 
@@ -185,4 +207,16 @@ func Getenv(key string, defval string) string {
 		return defval
 	}
 	return val
+}
+
+func (c *Config) GetBlackListTerms() []string {
+	var blackListTerms []string
+	blacklist := strings.Split(c.Blacklist, ",")
+	for _, term := range blacklist {
+		if term != "" {
+			blackListTerms = append(blackListTerms, strings.TrimSpace(term))
+		}
+	}
+	sort.Strings(blackListTerms)
+	return blackListTerms
 }

@@ -1,0 +1,19 @@
+{
+  "uuid": "2de63f07-3252-4963-bc05-801979944a2f",
+  "name": "test",
+  "is_template": false,
+  "user_email": "rafael.soares@weni.ai",
+  "date_format": "D",
+  "template_type_uuid": null,
+  "timezone": "America/Sao_Paulo",
+  "organization_id": 420209,
+  "extra_fields": {},
+  "authorizations": [
+    {
+      "user_email": "rafael.soares@weni.ai",
+      "role": 3
+    }
+  ],
+  "description": "none",
+  "brain_on": true
+}

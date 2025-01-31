@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/go-redis/redis/v8"
+	"github.com/bsm/redislock"
+	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
@@ -57,6 +57,15 @@ func Start(cfg *config.Config) {
 
 	routes.Setup(codeactions)
 
+	redisOpt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	redisClient := redis.NewClient(redisOpt)
+	locker := redislock.New(redisClient)
+
+	codeactions.Locker = locker
+
 	if err := SetupLibs(codeactions); err != nil {
 		log.WithError(err).Fatal(err)
 	}
@@ -97,6 +106,9 @@ func Start(cfg *config.Config) {
 			log.WithError(err)
 		}
 	}
+
+	codeactions.StartCodeLogCleaner(context.TODO(), cfg)
+	codeactions.StartCodeRunCleaner(context.TODO(), cfg)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
