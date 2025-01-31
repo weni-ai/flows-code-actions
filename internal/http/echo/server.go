@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bsm/redislock"
+	"github.com/go-redis/redis/v8"
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
@@ -15,7 +16,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 )
 
@@ -55,13 +55,10 @@ func (s *EchoPermissionHandler) CheckPermission(ctx context.Context, c echo.Cont
 }
 
 type Server struct {
-	Echo   *echo.Echo
-	Config *config.Config
-	DB     *mongo.Database
 	Echo     *echo.Echo
 	Config   *config.Config
 	DB       *mongo.Database
-	Redis  *redis.Client
+	Redis    *redis.Client
 	Locker   *redislock.Client
 	Services *Services
 }

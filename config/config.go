@@ -20,13 +20,12 @@ type Config struct {
 	Redis              string
 	RateLimiterCode    RateLimiterConfig
 	Cleaner            CleanerConfig
-  Blacklist          string
+	Blacklist          string
 }
 
 type RateLimiterConfig struct {
 	MaxRequests int
 	Window      int
-	RedisURL           string
 }
 
 type CleanerConfig struct {
@@ -90,8 +89,8 @@ func NewConfig() *Config {
 		EDA:             LoadEDAConfig(),
 		Redis:           Getenv("FLOWS_CODE_ACTIONS_REDIS", "redis://localhost:6379/10"),
 		RateLimiterCode: LoadRateLimiterCodeConfig(),
-		Cleaner:     NewCleanerConfig(),
-		Blacklist:   Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
+		Cleaner:         NewCleanerConfig(),
+		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 	}
 }
 
@@ -107,7 +106,6 @@ func LoadRateLimiterCodeConfig() RateLimiterConfig {
 	return RateLimiterConfig{
 		MaxRequests: maxRequests,
 		Window:      window,
-    RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
 	}
 }
 
