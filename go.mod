@@ -3,18 +3,22 @@ module github.com/weni-ai/flows-code-actions
 go 1.21.4
 
 require (
+	github.com/bsm/redislock v0.9.4
 	github.com/containerd/cgroups/v3 v3.0.3
 	github.com/golang-module/carbon/v2 v2.3.12
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/opencontainers/runtime-spec v1.0.2
+	github.com/redis/go-redis/v9 v9.7.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 )
 
 require (
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect

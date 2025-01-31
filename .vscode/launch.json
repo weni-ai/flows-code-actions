@@ -16,6 +16,9 @@
         "FLOWS_CODE_ACTIONS_AUTH_TOKEN": "",
         "FLOWS_CODE_ACTIONS_OIDC_AUTH_ENABLED": "false",
         "FLOWS_CODE_ACTIONS_RABBITMQ_URL": "amqp://localhost:5672/",
+        "FLOWS_CODE_ACTIONS_CLEANER_RETENTION_PERIOD": "1",
+        "FLOWS_CODE_ACTIONS_CLEANER_SCHEDULE_TIME": "16:00"
+        "FLOWS_CODE_ACTIONS_RABBITMQ_URL": "amqp://localhost:5672/",
         "FLOW_CODE_ACTIONS_PERMISSION_QUEUE": "code-actions.permissions",
         "FLOWS_CODE_ACTIONS_PERMISSION_EXCHANGE": "project-auths.topic",
       }

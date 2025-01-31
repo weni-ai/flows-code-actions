@@ -17,7 +17,14 @@ type Config struct {
 	SentryDSN          string
 	ResourceManagement ResourceConfig
 	EDA                EDAConfig
-	Blacklist          string
+	RedisURL           string
+	Cleaner            CleanerConfig
+  Blacklist          string
+}
+
+type CleanerConfig struct {
+	ScheduleTime    string
+	RetentionPeriod string
 }
 
 type HTTPConfig struct {
@@ -74,7 +81,18 @@ func NewConfig() *Config {
 		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
 		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
 		EDA:         LoadEDAConfig(),
+		RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
+		Cleaner:     NewCleanerConfig(),
 		Blacklist:   Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
+	}
+}
+
+func NewCleanerConfig() CleanerConfig {
+	scheduleTime := Getenv("FLOWS_CODE_ACTIONS_CLEANER_SCHEDULE_TIME", "01:00")
+	retentionPeriod := Getenv("FLOWS_CODE_ACTIONS_CLEANER_RETENTION_PERIOD", "30")
+	return CleanerConfig{
+		ScheduleTime:    scheduleTime,
+		RetentionPeriod: retentionPeriod,
 	}
 }
 
