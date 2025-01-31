@@ -2,10 +2,12 @@ package codeactions
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"time"
-
 	"github.com/bsm/redislock"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +33,27 @@ func Start(cfg *config.Config) {
 	}
 
 	codeactions.DB = db
+
+	redisURL, _ := url.Parse(cfg.Redis)
+	rdb, err := strconv.Atoi(strings.TrimLeft(redisURL.Path, "/"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	rpass, _ := redisURL.User.Password()
+	RedisClient := redis.NewClient(&redis.Options{
+		Addr:     redisURL.Host,
+		DB:       rdb,
+		Password: rpass,
+	})
+	pong, err := RedisClient.Ping(context.TODO()).Result()
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.Info("Pong:", pong)
+	}
+	defer RedisClient.Close()
+
+	codeactions.Redis = RedisClient
 
 	routes.Setup(codeactions)
 

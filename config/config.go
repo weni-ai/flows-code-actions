@@ -17,9 +17,16 @@ type Config struct {
 	SentryDSN          string
 	ResourceManagement ResourceConfig
 	EDA                EDAConfig
-	RedisURL           string
+	Redis              string
+	RateLimiterCode    RateLimiterConfig
 	Cleaner            CleanerConfig
   Blacklist          string
+}
+
+type RateLimiterConfig struct {
+	MaxRequests int
+	Window      int
+	RedisURL           string
 }
 
 type CleanerConfig struct {
@@ -73,17 +80,34 @@ type EDAConfig struct {
 
 func NewConfig() *Config {
 	return &Config{
-		HTTP:        LoadHTTPConfig(),
-		DB:          LoadDBConfig(),
-		OIDC:        LoadOIDCConfig(),
-		AuthToken:   Getenv("FLOWS_CODE_ACTIONS_AUTH_TOKEN", ""),
-		Environment: Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local"),
-		LogLevel:    Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
-		SentryDSN:   Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
-		EDA:         LoadEDAConfig(),
-		RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
+		HTTP:            LoadHTTPConfig(),
+		DB:              LoadDBConfig(),
+		OIDC:            LoadOIDCConfig(),
+		AuthToken:       Getenv("FLOWS_CODE_ACTIONS_AUTH_TOKEN", ""),
+		Environment:     Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local"),
+		LogLevel:        Getenv("FLOWS_CODE_ACTIONS_LOG_LEVEL", "debug"),
+		SentryDSN:       Getenv("FLOWS_CODE_ACTIONS_SENTRY_DSN", ""),
+		EDA:             LoadEDAConfig(),
+		Redis:           Getenv("FLOWS_CODE_ACTIONS_REDIS", "redis://localhost:6379/10"),
+		RateLimiterCode: LoadRateLimiterCodeConfig(),
 		Cleaner:     NewCleanerConfig(),
 		Blacklist:   Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
+	}
+}
+
+func LoadRateLimiterCodeConfig() RateLimiterConfig {
+	maxRequests, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_CODE_LIMITER_MAX_REQUESTS", "600"))
+	if err != nil {
+		maxRequests = 600
+	}
+	window, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_CODE_LIMITER_WINDOW_WINDOW", "60"))
+	if err != nil {
+		window = 60
+	}
+	return RateLimiterConfig{
+		MaxRequests: maxRequests,
+		Window:      window,
+    RedisURL:    Getenv("FLOWS_CODE_ACTIONS_REDIS_URL", "redis://localhost:6379/15"),
 	}
 }
 

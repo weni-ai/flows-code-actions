@@ -89,3 +89,13 @@ func CheckPermission(ctx context.Context, c echo.Context, projectUUID string) er
 	}
 	return nil
 }
+
+func LimitByCodeIDMiddleware(next echo.HandlerFunc, limiter server.RateLimiter) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		codeID := c.Param("code_id")
+		if limiter.Allow(codeID) {
+			return next(c)
+		}
+		return echo.NewHTTPError(http.StatusTooManyRequests, http.StatusText(http.StatusTooManyRequests))
+	}
+}

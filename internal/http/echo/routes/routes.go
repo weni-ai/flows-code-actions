@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/code"
@@ -41,6 +42,8 @@ func Setup(server *s.Server) {
 
 	coderunnerService := coderunner.NewCodeRunnerService(server.Config, coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
+
+	ratelimiter := s.NewRateLimiter(server.Redis, 3, time.Minute*1)
 
 	log := logrus.New()
 	server.Echo.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -90,5 +93,5 @@ func Setup(server *s.Server) {
 	server.Echo.POST("/run/:code_id", handlers.RequireAuthToken(server.Config, coderunnerHandler.RunCode))
 	server.Echo.Any("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
 
-	server.Echo.Any("/action/endpoint/:code_id", coderunnerHandler.ActionEndpoint)
+	server.Echo.Any("/action/endpoint/:code_id", handlers.LimitByCodeIDMiddleware(coderunnerHandler.ActionEndpoint, *ratelimiter))
 }
