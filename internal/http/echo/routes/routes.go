@@ -43,7 +43,11 @@ func Setup(server *s.Server) {
 	coderunnerService := coderunner.NewCodeRunnerService(server.Config, coderunService, codelogService)
 	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
 
-	ratelimiter := s.NewRateLimiter(server.Redis, 3, time.Minute*1)
+	ratelimiter := s.NewRateLimiter(
+		server.Redis,
+		server.Config.RateLimiterCode.MaxRequests,
+		time.Duration(server.Config.RateLimiterCode.Window)*time.Second,
+	)
 
 	log := logrus.New()
 	server.Echo.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
