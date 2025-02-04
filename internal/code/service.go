@@ -34,9 +34,14 @@ func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 		}
 	}
 
+	skiplist := s.conf.GetSkipListTerms()
+
 	// TODO: move this lib management to another place
 	if code.Language == TypePy {
 		externalLibs := codelib.ExtractPythonLibs(code.Source)
+
+		externalLibs = removeItens(externalLibs, skiplist)
+
 		if len(externalLibs) > 0 {
 			err := codelib.InstallPythonLibs(externalLibs)
 			if err != nil {
@@ -112,4 +117,20 @@ func (s *Service) Update(ctx context.Context, id string, name string, source str
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func removeItens(from []string, source []string) []string {
+	mp := make(map[string]bool)
+	for _, item := range source {
+		mp[item] = true
+	}
+
+	newSL := []string{}
+	for _, item := range from {
+		if !mp[item] {
+			newSL = append(newSL, item)
+		}
+	}
+
+	return newSL
 }

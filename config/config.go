@@ -21,6 +21,7 @@ type Config struct {
 	RateLimiterCode    RateLimiterConfig
 	Cleaner            CleanerConfig
 	Blacklist          string
+	Skiplist           string
 }
 
 type RateLimiterConfig struct {
@@ -91,6 +92,7 @@ func NewConfig() *Config {
 		RateLimiterCode: LoadRateLimiterCodeConfig(),
 		Cleaner:         NewCleanerConfig(),
 		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
+		Skiplist:        Getenv("FLOWS_CODE_ACTIONS_SKIPLIST", ""),
 	}
 }
 
@@ -217,4 +219,16 @@ func (c *Config) GetBlackListTerms() []string {
 	}
 	sort.Strings(blackListTerms)
 	return blackListTerms
+}
+
+func (c *Config) GetSkipListTerms() []string {
+	var skipListTerms []string
+	skiplist := strings.Split(c.Skiplist, ",")
+	for _, term := range skiplist {
+		if term != "" {
+			skipListTerms = append(skipListTerms, strings.TrimSpace(term))
+		}
+	}
+	sort.Strings(skipListTerms)
+	return skipListTerms
 }
