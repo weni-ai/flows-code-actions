@@ -42,6 +42,9 @@ func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, err
 	}
+	if codeAction.Timeout == 0 {
+		codeAction.Timeout = 60
+	}
 	return codeAction, err
 }
 

@@ -32,13 +32,15 @@ type Code struct {
 
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+
+	Timeout int `bson:"timeout" json:"timeout"`
 }
 
 type UseCase interface {
 	Create(ctx context.Context, code *Code) (*Code, error)
 	GetByID(ctx context.Context, id string) (*Code, error)
 	ListProjectCodes(ctx context.Context, projectUUID string, codeType string) ([]Code, error)
-	Update(ctx context.Context, id string, name string, source string, codeType string) (*Code, error)
+	Update(ctx context.Context, id string, name string, source string, codeType string, timeout int) (*Code, error)
 	Delete(ctx context.Context, codeID string) error
 }
 
@@ -85,4 +87,15 @@ func (lang *LanguageType) Validate() error {
 		return nil
 	}
 	return fmt.Errorf(`language type (%s) is not valid`, string(*lang))
+}
+
+// SetTiemout set the timeout for the execution of the code, in seconds. Min 5, max 300, default is 60 seconds
+func (c *Code) SetTimeout(timeout int) {
+	c.Timeout = timeout
+	if timeout < 5 {
+		c.Timeout = 60
+	}
+	if timeout >= 120 {
+		c.Timeout = 120
+	}
 }
