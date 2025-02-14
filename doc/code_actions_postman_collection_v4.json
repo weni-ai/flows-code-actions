@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "013d7f95-aa92-4360-b17c-8ae1fea697b6",
+		"_postman_id": "3a6ba11c-d759-4891-a11b-e8b8b4768d0c",
 		"name": "Code Actions",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "23087434"
@@ -452,11 +452,15 @@
 					"    }",
 					"};",
 					"",
-					"pm.sendRequest(requestToken, function(err, response) {",
-					"    var data = response.json();",
-					"    console.log(data)",
-					"    pm.collectionVariables.set(\"access_token\", data.access_token)",
-					"});"
+					"var access_token = pm.collectionVariables.get(\"access_token\")",
+					"",
+					"if (access_token == \"\") {",
+					"    pm.sendRequest(requestToken, function(err, response) {",
+					"        var data = response.json();",
+					"        pm.collectionVariables.set(\"access_token\", data.access_token)",
+					"    });",
+					"}",
+					""
 				]
 			}
 		},
