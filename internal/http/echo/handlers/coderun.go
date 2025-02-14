@@ -73,7 +73,7 @@ func (h *CodeRunHandler) Find(c echo.Context) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	codeRuns, err := h.codeRunService.ListByCodeID(ctx, codeID, filter)
 	if err != nil {

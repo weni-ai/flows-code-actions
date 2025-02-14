@@ -45,7 +45,7 @@ func (h *CodeLogHandler) Find(c echo.Context) error {
 	if runID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid run_id is required"))
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	codeLogs, err := h.codelogService.ListRunLogs(ctx, runID)
