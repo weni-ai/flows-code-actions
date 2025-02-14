@@ -38,5 +38,10 @@ USER ${APP_USER}:${APP_GROUP}
 
 RUN chmod -R u+w /home/app
 
+RUN wget https://downloads.mongodb.com/compass/mongosh-2.3.9-linux-x64.tgz && \
+tar -zxvf mongosh-2.3.9-linux-x64.tgz && \
+mv mongosh-2.3.9-linux-x64 ./mongosh && \
+chmod +x ./mongosh/bin/mongosh
+
 EXPOSE 8080
 CMD ["./main"]
