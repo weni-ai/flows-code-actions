@@ -45,13 +45,14 @@ class Result:
             print("result saved!")
 
 class Log:
-    def __init__(self, db=None, runId=None):
+    def __init__(self, db=None, runId=None, codeId=None):
         self._db = db
         self._runId = runId
+        self._codeId = codeId
 
     def _create(self, logtype="", content=""):
         now = datetime.datetime.now()
-        log = {"run_id": ObjectId(self._runId), "type": logtype, "content": content, "created_at": now, "updated_at": now}
+        log = {"run_id": ObjectId(self._runId), "code_id": ObjectId(self._codeId), "type": logtype, "content": content, "created_at": now, "updated_at": now}
         db["codelog"].insert_one(log)
 
     def debug(self, content=""):
@@ -74,6 +75,7 @@ def main():
     parser.add_argument('-a', '--arg', type=str, help='Add an argument in the form of key===value')
     parser.add_argument('-b', '--body', type=str, help='Body content')
     parser.add_argument('-r', '--run', type=str, help='run id')
+    parser.add_argument('-c', '--codeid', type=str, help='code id')
 
     args = parser.parse_args()
     
@@ -86,12 +88,13 @@ def main():
         body = args.body.strip()
 
     run_id = args.run.strip()
+    code_id = args.codeid.strip()
     
     engine = Engine(
         params=Params(params_dict), 
         body=body, 
         result=Result(db=db, runId=run_id),
-        log=Log(db=db, runId=run_id)
+        log=Log(db=db, runId=run_id, codeId=code_id)
     )
     action.Run(engine)
 
