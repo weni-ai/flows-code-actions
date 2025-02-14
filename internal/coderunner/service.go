@@ -128,19 +128,20 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 	}
 
 	idRunArg := fmt.Sprintf("-r %s", coderunID)
+	idCodeArg := fmt.Sprintf("-c %s", codeID)
 
 	var cmd *exec.Cmd
 	if paramsArgs != "" {
 		if bodyArg != "" {
-			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg)
+			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg, idCodeArg)
 		} else {
-			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, idRunArg)
+			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, idRunArg, idCodeArg)
 		}
 	} else {
 		if bodyArg != "" {
-			cmd = exec.Command("python", tempDir+"/main.py", bodyArg, idRunArg)
+			cmd = exec.Command("python", tempDir+"/main.py", bodyArg, idRunArg, idCodeArg)
 		} else {
-			cmd = exec.Command("python", tempDir+"/main.py", idRunArg)
+			cmd = exec.Command("python", tempDir+"/main.py", idRunArg, idCodeArg)
 		}
 	}
 	var stdout bytes.Buffer
