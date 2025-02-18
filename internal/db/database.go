@@ -28,3 +28,22 @@ func GetMongoDatabase(cf *config.Config) (*mongo.Database, error) {
 	db := mongoClient.Database(cf.DB.Name)
 	return db, nil
 }
+
+type MongoPaginate struct {
+	limit int64
+	page  int64
+}
+
+func NewMongoPaginate(limit, page int) *MongoPaginate {
+	return &MongoPaginate{
+		limit: int64(limit),
+		page:  int64(page),
+	}
+}
+
+func (p *MongoPaginate) GetpaginatedOpts() *options.FindOptions {
+	l := p.limit
+	skip := p.page*p.limit - p.limit
+	fOpt := options.FindOptions{Limit: &l, Skip: &skip}
+	return &fOpt
+}

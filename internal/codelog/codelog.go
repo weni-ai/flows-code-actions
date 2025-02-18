@@ -32,10 +32,11 @@ type CodeLog struct {
 type UseCase interface {
 	Create(ctx context.Context, log *CodeLog) (*CodeLog, error)
 	GetByID(ctx context.Context, id string) (*CodeLog, error)
-	ListRunLogs(ctx context.Context, runID string) ([]CodeLog, error)
+	ListRunLogs(ctx context.Context, runID, codeID string, limit, page int) ([]CodeLog, error)
 	Update(ctx context.Context, id string, Content string) (*CodeLog, error)
 	Delete(ctx context.Context, id string) error
 	StartCodeLogCleaner(*config.Config) error
+	Count(ctx context.Context, runID, codeID string) (int64, error)
 }
 
 func NewCodeLog(runID string, codeID string, logType LogType, content string) *CodeLog {

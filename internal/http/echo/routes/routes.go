@@ -35,7 +35,7 @@ func Setup(server *s.Server) {
 
 	codelogRepo := codelogRepoMongo.NewCodeLogRepository(server.DB)
 	codelogService := codelog.NewCodeLogService(codelogRepo)
-	codelogHandler := handlers.NewCodeLogHandler(codelogService)
+	codelogHandler := handlers.NewCodeLogHandler(codelogService, coderunService)
 
 	server.Services.CodeLogService = codelogService
 	server.Services.CodeRunService = coderunService
