@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
+	"github.com/weni-ai/flows-code-actions/internal/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,6 +21,34 @@ type codelogRepo struct {
 func NewCodeLogRepository(db *mongo.Database) codelog.Repository {
 	collection := db.Collection("codelog")
 	return &codelogRepo{collection: collection}
+}
+
+func (r *codelogRepo) Count(ctx context.Context, runID, codeID string) (int64, error) {
+	if runID == "" && codeID == "" {
+		return 0, errors.New("must specify a run ID or a code ID")
+	}
+
+	findQuery := bson.M{}
+	if runID != "" {
+		pRunID, err := primitive.ObjectIDFromHex(runID)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to parse codeID to ObjectID")
+		}
+		findQuery["run_id"] = pRunID
+	}
+
+	if codeID != "" {
+		pCodeID, err := primitive.ObjectIDFromHex(codeID)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to parse codeID to ObjectID")
+		}
+		findQuery["code_id"] = pCodeID
+	}
+	count, err := r.collection.CountDocuments(ctx, findQuery)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (r *codelogRepo) Create(ctx context.Context, codelog *codelog.CodeLog) (*codelog.CodeLog, error) {
@@ -46,13 +75,32 @@ func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog,
 	return log, err
 }
 
-func (r *codelogRepo) ListRunLogs(ctx context.Context, runID string) ([]codelog.CodeLog, error) {
+func (r *codelogRepo) ListRunLogs(ctx context.Context, runID string, codeID string, limit, page int) ([]codelog.CodeLog, error) {
 	logs := []codelog.CodeLog{}
-	pRunID, err := primitive.ObjectIDFromHex(runID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse runID to ObjectID")
+
+	if runID == "" && codeID == "" {
+		return nil, errors.New("must specify a run ID or a code ID")
 	}
-	c, err := r.collection.Find(ctx, bson.M{"run_id": pRunID})
+
+	findQuery := bson.M{}
+	if runID != "" {
+		pRunID, err := primitive.ObjectIDFromHex(runID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse codeID to ObjectID")
+		}
+		findQuery["run_id"] = pRunID
+	}
+
+	if codeID != "" {
+		pCodeID, err := primitive.ObjectIDFromHex(codeID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse codeID to ObjectID")
+		}
+		findQuery["code_id"] = pCodeID
+	}
+
+	options := db.NewMongoPaginate(limit, page).GetpaginatedOpts()
+	c, err := r.collection.Find(ctx, findQuery, options)
 	if err != nil {
 		return nil, err
 	}

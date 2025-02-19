@@ -26,8 +26,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*CodeLog, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) ListRunLogs(ctx context.Context, id string) ([]CodeLog, error) {
-	return s.repo.ListRunLogs(ctx, id)
+func (s *Service) ListRunLogs(ctx context.Context, id string, codeID string, limit, page int) ([]CodeLog, error) {
+	return s.repo.ListRunLogs(ctx, id, codeID, limit, page)
 }
 
 func (s *Service) Update(ctx context.Context, id string, content string) (*CodeLog, error) {
@@ -64,4 +64,8 @@ func (s *Service) StartCodeLogCleaner(cfg *config.Config) error {
 		}
 	}()
 	return nil
+}
+
+func (s *Service) Count(ctx context.Context, runID, codeID string) (int64, error) {
+	return s.repo.Count(ctx, runID, codeID)
 }
