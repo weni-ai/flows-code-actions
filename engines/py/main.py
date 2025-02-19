@@ -52,7 +52,7 @@ class Log:
 
     def _create(self, logtype="", content=""):
         now = datetime.datetime.now()
-        log = {"run_id": ObjectId(self._runId), "code_id": ObjectId(self._codeId), "type": logtype, "content": content, "created_at": now, "updated_at": now}
+        log = {"run_id": ObjectId(self._runId), "code_id": ObjectId(self._codeId), "type": logtype, "content": str(content), "created_at": now, "updated_at": now}
         db["codelog"].insert_one(log)
 
     def debug(self, content=""):
