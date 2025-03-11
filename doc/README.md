@@ -284,12 +284,28 @@ https://code-actions.weni.ai/codelog
 ##### Query String Parameters:
 
 * RUN_ID
+* CODE_ID
+* PAGE (1 to n)
 
 ```bash
 https://code-actions.weni.ai/codelog?run_id=<RUN_ID>
 ```
-returns the logs belonging to the specified run by its id.
+OR
+```bash
+https://code-actions.weni.ai/codelog?code_id=<CODE_ID>
+```
 
+OR
+```bash
+https://code-actions.weni.ai/codelog?code_id=<CODE_ID>&page=<N(int)>
+```
+returns the logs belonging to the specified run by its id, code by its id, paginated since 1 to n depending on the total amount of records.
+
+eg:
+
+```bash
+https://code-actions.weni.ai/codelog?code_id=67b5551d92d1ff6471e94994&page=2
+```
 
 ## Code Action Execution
 

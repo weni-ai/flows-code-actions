@@ -62,12 +62,18 @@ func ProtectEndpointWithAuthToken(conf *config.Config, next echo.HandlerFunc, re
 		}
 		if resp.StatusCode != 200 {
 			log.Info(string(body))
-			return errors.New("error on get userinfo")
+			return echo.NewHTTPError(http.StatusInternalServerError, "error on get userinfo")
 		}
 		var result map[string]interface{}
 		err = json.Unmarshal(body, &result)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal userinfo")
+		}
+
+		if can_communicate_internally, ok := result["can_communicate_internally"]; ok {
+			if can_communicate_internally.(bool) {
+				return next(c)
+			}
 		}
 
 		c.Set("check_permission", true)
