@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/go-redis/redis/v8"
 )
 
@@ -37,9 +35,8 @@ func (r *RateLimiter) Allow(codeID string) bool {
 	cmd2 := txp.Expire(ctx, key, r.window)
 	cmd3 := txp.HGet(ctx, key, "timestamp")
 
-	if _, err := txp.Exec(context.Background()); err != nil {
-		log.Error("Transaction failed:", err)
-	}
+	txp.Exec(context.Background())
+
 	count, err := cmd1.Result()
 	if err != nil {
 		fmt.Println("Error increment count:", err)
