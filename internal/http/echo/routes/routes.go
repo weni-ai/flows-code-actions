@@ -17,6 +17,7 @@ import (
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
 
+	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -98,4 +99,8 @@ func Setup(server *s.Server) {
 	server.Echo.Any("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
 
 	server.Echo.Any("/action/endpoint/:code_id", handlers.LimitByCodeIDMiddleware(coderunnerHandler.ActionEndpoint, *ratelimiter))
+
+	server.Echo.Use(echoprometheus.NewMiddleware("codeactions"))
+
+	server.Echo.GET("/metrics", echoprometheus.NewHandler())
 }
