@@ -68,10 +68,6 @@ func Start(cfg *config.Config) {
 
 	codeactions.Locker = locker
 
-	if err := SetupLibs(codeactions); err != nil {
-		log.WithError(err).Fatal(err)
-	}
-
 	go func() {
 		err := codeactions.Start(cfg.HTTP.Port)
 		if err != nil {
