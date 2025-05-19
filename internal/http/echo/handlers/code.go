@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/code"
+	"github.com/weni-ai/flows-code-actions/internal/metrics"
 )
 
 type CodeHandler struct {
@@ -123,6 +124,8 @@ func (h *CodeHandler) CreateCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	metrics.AddCodeCreatedCount(ca.ProjectUUID, newCode.ID.Hex(), 1)
+
 	return c.JSON(http.StatusCreated, newCode)
 }
 
@@ -178,6 +181,8 @@ func (h *CodeHandler) UpdateCode(c echo.Context) error {
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
+	metrics.AddCodeCreatedCount(ca.ProjectUUID, codeID, 1)
 
 	return c.JSON(http.StatusOK, cd)
 }

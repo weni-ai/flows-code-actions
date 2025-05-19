@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 	"github.com/weni-ai/flows-code-actions/internal/coderunner"
+	"github.com/weni-ai/flows-code-actions/internal/metrics"
 )
 
 type CodeRunnerHandler struct {
@@ -78,6 +79,8 @@ func (h *CodeRunnerHandler) RunEndpoint(c echo.Context) error {
 }
 
 func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
+	start := time.Now()
+
 	codeID := c.Param("code_id")
 	if codeID == "" {
 		return echo.NewHTTPError(http.StatusNotFound, errors.New("Not Found"))
@@ -92,6 +95,12 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
+	defer func() {
+		metrics.CodeRunElapsed(codeAction.ProjectUUID, codeID, time.Since(start).Seconds())
+		metrics.AddCodeRunCount(codeAction.ProjectUUID, codeID, 1)
+	}()
+
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(codeAction.Timeout))
 	defer cancel()
 
