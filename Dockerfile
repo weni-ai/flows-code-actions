@@ -1,4 +1,4 @@
-FROM golang:1.24.2-bookworm AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -12,22 +12,13 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
     --mount=type=bind,target=. \
     go install -v ./cmd/codeactions/main.go
 
-FROM debian:bookworm-slim
+FROM alpine:3.21.3
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    python3-dev \
-    python3-pip \
-    ffmpeg \
-    libpq-dev \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN apk add --no-cache python3 python3-dev py3-pip ffmpeg postgresql-dev libpq libpq-dev build-base
+RUN pip install psycopg2 psycopg2-binary pymongo --break-system-packages
 
 COPY --from=builder /app/requirements.txt .
-
-RUN pip3 install --break-system-packages --no-cache-dir -r requirements.txt
+RUN pip install --break-system-packages --no-cache-dir -r requirements.txt
 
 ENV APP_USER=app \
     APP_GROUP=app \
