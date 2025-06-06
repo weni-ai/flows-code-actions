@@ -50,18 +50,27 @@ docker compose -f docker-compose.image-test.yml down
 # 1. Build da imagem
 docker build -t codeactions-app .
 
+docker network create app_test
+
 # 2. Iniciar dependências
-docker run -d --name mongo-test -p 27017:27017 mongo:7
-docker run -d --name redis-test -p 6379:6379 redis:7-alpine
+docker run -d --name mongo_test --network app_test -p 27017:27017 mongo:7
+
+docker run -d --name redis_test --network app_test -p 6379:6379 redis:7-alpine
 
 # 3. Iniciar aplicação
-docker run -d --name app-test -p 8050:8050 \
-  -e FLOWS_CODE_ACTIONS_MONGODB="mongodb://localhost:27017/codeactions_test" \
-  -e FLOWS_CODE_ACTIONS_REDIS="redis://localhost:6379/1" \
+docker run -d --name app-test --network app_test -p 8050:8050 \
+  -e FLOWS_CODE_ACTIONS_MONGO_DB_URI="mongodb://mongo_test:27017" \
+  -e FLOWS_CODE_ACTIONS_MONGO_DB_NAME="codeactions_test" \
+  -e FLOWS_CODE_ACTIONS_REDIS="redis://redis_test:6379/1" \
+  -e FLOWS_CODE_ACTIONS_ENVIRONMENT="test" \
   codeactions-app
 
 # 4. Executar testes
 go test -v ./integration_image_test.go
+
+
+docker stop mongo_test redis_test app-test
+docker rm mongo_test redis_test app-test
 ```
 
 ## 📋 **Testes Implementados**

@@ -40,7 +40,8 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - FLOWS_CODE_ACTIONS_MONGODB=mongodb://mongo:27017/codeactions_test
+      - FLOWS_CODE_ACTIONS_MONGO_DB_URI=mongodb://mongo:27017
+      - FLOWS_CODE_ACTIONS_MONGO_DB_NAME=codeactions_test
       - FLOWS_CODE_ACTIONS_REDIS=redis://redis:6379/1
       - FLOWS_CODE_ACTIONS_HTTP_PORT=8050
       - FLOWS_CODE_ACTIONS_ENVIRONMENT=test

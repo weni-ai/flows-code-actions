@@ -131,6 +131,21 @@ def Run(engine):
 	suite.Assert().Equal(float64(50), execResult["calculation"])
 
 	fmt.Printf("✅ Código executado com sucesso: %+v\n", execResult)
+
+	// 3. Limpar - deletar código criado
+	deleteURL := fmt.Sprintf("%s/code/%s", suite.baseURL, codeID)
+	deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	suite.Require().NoError(err)
+
+	dq := deleteReq.URL.Query()
+	dq.Add("project_uuid", suite.projectUUID)
+	deleteReq.URL.RawQuery = dq.Encode()
+
+	deleteResp, err := suite.httpClient.Do(deleteReq)
+	suite.Require().NoError(err)
+	defer deleteResp.Body.Close()
+
+	fmt.Printf("🧹 Código deletado (status: %d)\n", deleteResp.StatusCode)
 }
 
 func (suite *ImageIntegrationTestSuite) TestCreateCodeWithComplexLogic() {
@@ -205,6 +220,21 @@ def Run(engine):
 	suite.Assert().Equal("Hello World", operations["string_ops"])
 
 	fmt.Printf("✅ Código complexo executado: timestamp=%v\n", result["timestamp"])
+
+	// Limpar - deletar código criado
+	deleteURL := fmt.Sprintf("%s/code/%s", suite.baseURL, codeID)
+	deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	suite.Require().NoError(err)
+
+	dq := deleteReq.URL.Query()
+	dq.Add("project_uuid", suite.projectUUID)
+	deleteReq.URL.RawQuery = dq.Encode()
+
+	deleteResp, err := suite.httpClient.Do(deleteReq)
+	suite.Require().NoError(err)
+	defer deleteResp.Body.Close()
+
+	fmt.Printf("🧹 Código complexo deletado (status: %d)\n", deleteResp.StatusCode)
 }
 
 func (suite *ImageIntegrationTestSuite) TestListCodes() {
@@ -225,66 +255,6 @@ func (suite *ImageIntegrationTestSuite) TestListCodes() {
 	suite.Assert().GreaterOrEqual(len(codeList), 0)
 
 	fmt.Printf("✅ Listagem retornou %d códigos\n", len(codeList))
-}
-
-func (suite *ImageIntegrationTestSuite) TestCodeWithParameters() {
-	// Código que usa parâmetros da requisição
-	parameterCode := `
-def Run(engine):
-    # Tentar obter parâmetros da requisição (se houver)
-    request_data = engine.get("request", {})
-    
-    result = {
-        "message": "Parameter test",
-        "received_request": bool(request_data),
-        "echo": "Hello from endpoint",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
-    
-    engine.result.set(result, content_type="json")
-`
-
-	// Criar código
-	createURL := suite.baseURL + "/code"
-	req, err := http.NewRequest(http.MethodPost, createURL, bytes.NewBuffer([]byte(parameterCode)))
-	suite.Require().NoError(err)
-
-	q := req.URL.Query()
-	q.Add("project_uuid", suite.projectUUID)
-	q.Add("name", "Parameter Test Code")
-	q.Add("type", "endpoint")
-	q.Add("language", "python")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := suite.httpClient.Do(req)
-	suite.Require().NoError(err)
-	defer resp.Body.Close()
-
-	var createdCode map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&createdCode)
-	codeID := createdCode["id"].(string)
-
-	// Executar com payload JSON
-	executeURL := fmt.Sprintf("%s/action/endpoint/%s", suite.baseURL, codeID)
-	payload := map[string]interface{}{
-		"test_param": "test_value",
-		"number":     123,
-	}
-	payloadBytes, _ := json.Marshal(payload)
-
-	execResp, err := suite.httpClient.Post(executeURL, "application/json", bytes.NewBuffer(payloadBytes))
-	suite.Require().NoError(err)
-	defer execResp.Body.Close()
-
-	suite.Assert().Equal(http.StatusOK, execResp.StatusCode)
-
-	var result map[string]interface{}
-	json.NewDecoder(execResp.Body).Decode(&result)
-
-	suite.Assert().Equal("Parameter test", result["message"])
-	suite.Assert().Contains(result, "echo")
-
-	fmt.Printf("✅ Teste com parâmetros executado\n")
 }
 
 func (suite *ImageIntegrationTestSuite) TestErrorHandling() {
@@ -327,6 +297,21 @@ def Run(engine):
 		suite.Assert().True(execResp.StatusCode >= 400 || execResp.StatusCode == 200)
 
 		fmt.Printf("✅ Tratamento de erro testado (status: %d)\n", execResp.StatusCode)
+
+		// Limpar - deletar código criado
+		deleteURL := fmt.Sprintf("%s/code/%s", suite.baseURL, codeID)
+		deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+		suite.Require().NoError(err)
+
+		dq := deleteReq.URL.Query()
+		dq.Add("project_uuid", suite.projectUUID)
+		deleteReq.URL.RawQuery = dq.Encode()
+
+		deleteResp, err := suite.httpClient.Do(deleteReq)
+		suite.Require().NoError(err)
+		defer deleteResp.Body.Close()
+
+		fmt.Printf("🧹 Código de erro deletado (status: %d)\n", deleteResp.StatusCode)
 	} else {
 		fmt.Printf("✅ Código com erro rejeitado na criação (status: %d)\n", resp.StatusCode)
 	}

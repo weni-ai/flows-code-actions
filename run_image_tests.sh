@@ -33,13 +33,34 @@ cleanup() {
     echo "🧹 Limpando containers e rede..."
     
     # Parar e remover containers
-    # docker stop $APP_CONTAINER_NAME mongo-test redis-test 2>/dev/null || true
-    # docker rm $APP_CONTAINER_NAME mongo-test redis-test 2>/dev/null || true
+    echo "🛑 Parando containers..."
+    docker stop $APP_CONTAINER_NAME mongo-test redis-test 2>/dev/null || true
     
-    # # Remover rede
-    # docker network rm $NETWORK_NAME 2>/dev/null || true
+    echo "🗑️  Removendo containers..."
+    docker rm $APP_CONTAINER_NAME mongo-test redis-test 2>/dev/null || true
+    
+    # Remover rede
+    echo "🌐 Removendo rede..."
+    docker network rm $NETWORK_NAME 2>/dev/null || true
     
     echo "✅ Limpeza concluída"
+}
+
+# Função para limpeza inicial mais robusta
+initial_cleanup() {
+    echo "🧹 Limpeza inicial..."
+    
+    # Parar containers que possam estar rodando
+    docker stop $APP_CONTAINER_NAME mongo-test redis-test 2>/dev/null || true
+    docker rm $APP_CONTAINER_NAME mongo-test redis-test 2>/dev/null || true
+    
+    # Remover rede anterior
+    docker network rm $NETWORK_NAME 2>/dev/null || true
+    
+    # Limpar containers órfãos relacionados ao projeto
+    docker container prune -f --filter "label=project=codeactions-test" 2>/dev/null || true
+    
+    echo "✅ Limpeza inicial concluída"
 }
 
 # Função para construir imagem da aplicação
@@ -70,7 +91,12 @@ start_dependencies() {
     # Criar rede se não existir
     docker network create $NETWORK_NAME 2>/dev/null || true
     
+    # Parar e remover containers existentes se existirem
+    docker stop mongo-test redis-test 2>/dev/null || true
+    docker rm mongo-test redis-test 2>/dev/null || true
+    
     # MongoDB
+    echo "🗄️  Iniciando MongoDB..."
     docker run -d \
         --name mongo-test \
         --network $NETWORK_NAME \
@@ -78,6 +104,7 @@ start_dependencies() {
         mongo:7
     
     # Redis
+    echo "🔴 Iniciando Redis..."
     docker run -d \
         --name redis-test \
         --network $NETWORK_NAME \
@@ -86,20 +113,25 @@ start_dependencies() {
     echo "⏳ Aguardando dependências ficarem prontas..."
     
     # Aguardar MongoDB
-    local retries=20
+    local retries=30
+    echo "🔍 Testando conexão MongoDB..."
     for i in $(seq 1 $retries); do
-        if docker exec mongo-test mongosh --eval "db.adminCommand('ping')" &>/dev/null; then
+        if docker exec mongo-test mongosh --eval "db.adminCommand('ping')" --quiet &>/dev/null; then
             echo "✅ MongoDB pronto"
             break
         fi
         if [ $i -eq $retries ]; then
             echo "❌ MongoDB não ficou pronto"
+            echo "📋 Logs do MongoDB:"
+            docker logs mongo-test --tail 20
             exit 1
         fi
-        sleep 2
+        echo "⏳ MongoDB - tentativa $i/$retries..."
+        sleep 3
     done
     
     # Aguardar Redis
+    echo "🔍 Testando conexão Redis..."
     for i in $(seq 1 $retries); do
         if docker exec redis-test redis-cli ping | grep -q "PONG"; then
             echo "✅ Redis pronto"
@@ -107,22 +139,47 @@ start_dependencies() {
         fi
         if [ $i -eq $retries ]; then
             echo "❌ Redis não ficou pronto"
+            echo "📋 Logs do Redis:"
+            docker logs redis-test --tail 20
             exit 1
         fi
+        echo "⏳ Redis - tentativa $i/$retries..."
         sleep 2
     done
+    
+    # Verificar se containers estão na rede correta
+    echo "🔍 Verificando conectividade na rede..."
+    docker network inspect $NETWORK_NAME --format '{{range .Containers}}{{.Name}} {{end}}' | grep -q "mongo-test\|redis-test"
+    if [ $? -eq 0 ]; then
+        echo "✅ Containers estão na rede $NETWORK_NAME"
+    else
+        echo "❌ Problema na configuração da rede"
+        docker network inspect $NETWORK_NAME
+        exit 1
+    fi
 }
 
 # Função para iniciar aplicação
 start_application() {
     echo "🚀 Iniciando aplicação..."
     
+    # Parar e remover container da aplicação se existir
+    docker stop $APP_CONTAINER_NAME 2>/dev/null || true
+    docker rm $APP_CONTAINER_NAME 2>/dev/null || true
+    
     # Variáveis de ambiente para aplicação
+    echo "🔧 Configurando variáveis de ambiente:"
+    echo "   - MongoDB URI: mongodb://mongo-test:27017"
+    echo "   - MongoDB Name: codeactions_test"
+    echo "   - Redis: redis://redis-test:6379/1"
+    echo "   - Port: $APP_PORT"
+    
     docker run -d \
         --name $APP_CONTAINER_NAME \
         --network $NETWORK_NAME \
         -p $APP_PORT:$APP_PORT \
-        -e FLOWS_CODE_ACTIONS_MONGODB="mongodb://mongo-test:27017/codeactions_test" \
+        -e FLOWS_CODE_ACTIONS_MONGO_DB_URI="mongodb://mongo-test:27017" \
+        -e FLOWS_CODE_ACTIONS_MONGO_DB_NAME="codeactions_test" \
         -e FLOWS_CODE_ACTIONS_REDIS="redis://redis-test:6379/1" \
         -e FLOWS_CODE_ACTIONS_HTTP_PORT="$APP_PORT" \
         -e FLOWS_CODE_ACTIONS_ENVIRONMENT="test" \
@@ -131,8 +188,17 @@ start_application() {
     echo "⏳ Aguardando aplicação ficar disponível..."
     
     # Aguardar aplicação responder
-    local retries=30
+    local retries=60  # Aumentar timeout para debug
     for i in $(seq 1 $retries); do
+        # Verificar se container ainda está rodando
+        if ! docker ps --format "table {{.Names}}" | grep -q "$APP_CONTAINER_NAME"; then
+            echo "❌ Container da aplicação parou de funcionar!"
+            echo "📋 Logs da aplicação:"
+            docker logs $APP_CONTAINER_NAME --tail 50
+            exit 1
+        fi
+        
+        # Testar health endpoint
         if curl -s -f "$BASE_URL/health" &>/dev/null; then
             echo "✅ Aplicação disponível em $BASE_URL"
             return 0
@@ -140,12 +206,24 @@ start_application() {
         
         if [ $i -eq $retries ]; then
             echo "❌ Aplicação não ficou disponível"
+            echo "📋 Status do container:"
+            docker ps -a --filter name=$APP_CONTAINER_NAME
+            echo ""
             echo "📋 Logs da aplicação:"
-            docker logs $APP_CONTAINER_NAME
+            docker logs $APP_CONTAINER_NAME --tail 50
+            echo ""
+            echo "📋 Teste de conectividade na rede:"
+            docker exec $APP_CONTAINER_NAME ping -c 2 mongo-test || true
+            docker exec $APP_CONTAINER_NAME ping -c 2 redis-test || true
             exit 1
         fi
         
-        echo "⏳ Tentativa $i/$retries - Aguardando aplicação..."
+        if [ $((i % 10)) -eq 0 ]; then
+            echo "⏳ Tentativa $i/$retries - Aguardando aplicação..."
+            echo "📋 Status atual do container:"
+            docker ps --filter name=$APP_CONTAINER_NAME --format "table {{.Names}}\t{{.Status}}"
+        fi
+        
         sleep 2
     done
 }
@@ -252,6 +330,7 @@ main() {
                 echo "  --no-cleanup        Não limpar containers após testes"
                 echo "  --logs, -l          Mostrar logs dos serviços"
                 echo "  --port, -p <porta>  Porta da aplicação (padrão: 8050)"
+                echo "  --debug-crash       Investigar crashes da aplicação"
                 echo "  --help, -h          Mostrar esta ajuda"
                 echo ""
                 echo "Exemplos:"
@@ -261,6 +340,36 @@ main() {
                 echo "  $0 --test TestCreateAndExecuteCode        # Teste específico"
                 echo "  $0 --no-cleanup --logs                    # Manter containers e mostrar logs"
                 echo "  $0 --port 9000                            # Usar porta personalizada"
+                echo "  $0 --debug-crash                          # Debug de crashes"
+                exit 0
+                ;;
+            --debug-crash)
+                echo "🔍 Modo debug de crash ativado"
+                echo "Iniciando containers e investigando problemas..."
+                
+                # Verificar dependências
+                check_docker
+                
+                # Limpar ambiente
+                initial_cleanup
+                
+                # Construir imagem se necessário
+                build_app_image
+                
+                # Iniciar dependências
+                start_dependencies
+                
+                # Iniciar aplicação
+                start_application
+                
+                # Executar debug específico
+                ./debug_application_crash.sh
+                
+                echo ""
+                echo "💡 Para continuar debugando:"
+                echo "   docker exec -it $APP_CONTAINER_NAME sh"
+                echo "   docker logs $APP_CONTAINER_NAME -f"
+                
                 exit 0
                 ;;
             *)
@@ -284,7 +393,7 @@ main() {
     fi
     
     # Limpar ambiente anterior
-    cleanup
+    initial_cleanup
     
     # Construir imagem
     if [ "$force_build" = true ]; then
