@@ -182,7 +182,7 @@ func (h *CodeHandler) UpdateCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	metrics.AddCodeCreatedCount(ca.ProjectUUID, codeID, 1)
+	metrics.AddCodeUpdatedCount(ca.ProjectUUID, codeID, 1)
 
 	return c.JSON(http.StatusOK, cd)
 }
