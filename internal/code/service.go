@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const maxSourecBytes = 1024 * 1024
@@ -31,39 +30,6 @@ func (s *Service) Create(ctx context.Context, code *Code) (*Code, error) {
 	for _, term := range blacklist {
 		if strings.Contains(code.Source, term) {
 			return nil, errors.New("source code contains blacklisted term")
-		}
-	}
-
-	skiplist := s.conf.GetSkipListTerms()
-
-	// TODO: move this lib management to another place
-	if code.Language == TypePy {
-		externalLibs := codelib.ExtractPythonLibs(code.Source)
-
-		externalLibs = removeItens(externalLibs, skiplist)
-
-		if len(externalLibs) > 0 {
-			err := codelib.InstallPythonLibs(externalLibs)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// TODO: refactor this asap, is much responsibility to this function
-		for _, lib := range externalLibs {
-			codeLang := string(code.Language)
-			libLang := codelib.LanguageType(codeLang)
-			libFound, err := s.libService.Find(ctx, lib, &libLang)
-			if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-				return nil, err
-			}
-			if libFound == nil {
-				newLib := codelib.NewCodeLib(lib, libLang)
-				_, err := s.libService.Create(ctx, newLib)
-				if err != nil {
-					return nil, err
-				}
-			}
 		}
 	}
 
