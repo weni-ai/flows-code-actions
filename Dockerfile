@@ -17,6 +17,9 @@ FROM alpine:3.21.3
 RUN apk add --no-cache python3 python3-dev py3-pip ffmpeg postgresql-dev libpq libpq-dev build-base
 RUN pip install psycopg2 psycopg2-binary pymongo --break-system-packages
 
+COPY --from=builder /app/requirements.txt .
+RUN pip install --break-system-packages --no-cache-dir -r requirements.txt
+
 ENV APP_USER=app \
     APP_GROUP=app \
     USER_ID=1999 \
