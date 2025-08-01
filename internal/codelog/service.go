@@ -19,6 +19,7 @@ func NewCodeLogService(repo Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, codelog *CodeLog) (*CodeLog, error) {
+	codelog.Content = codelog.Content[:8000]
 	return s.repo.Create(ctx, codelog)
 }
 
