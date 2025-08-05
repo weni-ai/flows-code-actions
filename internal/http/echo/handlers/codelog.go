@@ -47,6 +47,10 @@ func (h *CodeLogHandler) Get(c echo.Context) error {
 	return c.JSON(http.StatusOK, codelog)
 }
 
+const (
+	perPage = 20
+)
+
 func (h *CodeLogHandler) Find(c echo.Context) error {
 	runID := c.QueryParam("run_id")
 	codeID := c.QueryParam("code_id")
@@ -54,7 +58,7 @@ func (h *CodeLogHandler) Find(c echo.Context) error {
 	if runID == "" && codeID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, errors.New("valid run_id or code_id is required"))
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	if codeID == "" {
@@ -70,21 +74,39 @@ func (h *CodeLogHandler) Find(c echo.Context) error {
 		qpage = "1"
 	}
 	page, _ := strconv.Atoi(qpage)
-	perPage := 20
 	codeLogs, err := h.codelogService.ListRunLogs(ctx, runID, codeID, perPage, page)
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return c.JSON(http.StatusOK, newCodeLogResponse([]codelog.CodeLog{}, 0, page))
+		}
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	ctx, cancel = context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
 	total, err := h.codelogService.Count(ctx, runID, codeID)
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return c.JSON(http.StatusRequestTimeout, err.Error())
+		}
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return c.JSON(http.StatusOK, echo.Map{
-		"data":      codeLogs,
-		"total":     total,
-		"page":      page,
-		"last_page": math.Ceil(float64(total) / float64(perPage)),
-	})
+	return c.JSON(http.StatusOK, newCodeLogResponse(codeLogs, total, page))
+}
+
+type CodeLogResponse struct {
+	Data     []codelog.CodeLog `json:"data"`
+	Total    int64             `json:"total"`
+	Page     int               `json:"page"`
+	LastPage int               `json:"last_page"`
+}
+
+func newCodeLogResponse(codeLogs []codelog.CodeLog, total int64, page int) CodeLogResponse {
+	return CodeLogResponse{
+		Data:     codeLogs,
+		Total:    total,
+		Page:     page,
+		LastPage: int(math.Ceil(float64(total) / float64(perPage))),
+	}
 }
