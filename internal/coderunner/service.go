@@ -33,13 +33,14 @@ func NewCodeRunnerService(confs *config.Config, coderun *coderun.Service, codelo
 	return &Service{codeRun: coderun, codeLog: codelog, confs: confs}
 }
 
-func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string, params map[string]interface{}, body string) (*coderun.CodeRun, error) {
+func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string, params map[string]interface{}, body string, headers map[string]interface{}) (*coderun.CodeRun, error) {
 	cID, _ := primitive.ObjectIDFromHex(codeID)
 	cr := &coderun.CodeRun{
-		CodeID: cID,
-		Status: coderun.StatusStarted,
-		Params: params,
-		Body:   body,
+		CodeID:  cID,
+		Status:  coderun.StatusStarted,
+		Params:  params,
+		Body:    body,
+		Headers: headers,
 	}
 
 	newCodeRun, err := s.codeRun.Create(ctx, cr)
@@ -49,7 +50,7 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 
 	switch language {
 	case "python":
-		_, err = s.runPython(ctx, codeID, newCodeRun.ID.Hex(), code, params, body)
+		_, err = s.runPython(ctx, codeID, newCodeRun.ID.Hex(), code, params, body, headers)
 	case "javascript":
 		_, err = runJs(ctx, code)
 	case "go":
@@ -82,7 +83,7 @@ func init() {
 	environment = config.Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local")
 }
 
-func (s *Service) runPython(ctx context.Context, codeID string, coderunID string, code string, params map[string]interface{}, body string) (string, error) {
+func (s *Service) runPython(ctx context.Context, codeID string, coderunID string, code string, params map[string]interface{}, body string, header map[string]interface{}) (string, error) {
 	tempDir, err := os.MkdirTemp("./", "code-")
 	if err != nil {
 		fmt.Println("Error ao criar diretório temporário:", err)
@@ -115,11 +116,21 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 	paramsArgs := ""
 	if len(params) > 0 {
 		paramsArgs = "-a "
-		paramsjs, err := json.Marshal(params)
+		paramsJson, err := json.Marshal(params)
 		if err != nil {
 			return "", err
 		}
-		paramsArgs += string(paramsjs)
+		paramsArgs += string(paramsJson)
+	}
+
+	headerArg := ""
+	if len(header) > 0 {
+		headerArg = "-H "
+		headerJson, err := json.Marshal(header)
+		if err != nil {
+			return "", err
+		}
+		headerArg += string(headerJson)
 	}
 
 	bodyArg := ""
@@ -133,15 +144,15 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 	var cmd *exec.Cmd
 	if paramsArgs != "" {
 		if bodyArg != "" {
-			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg, idCodeArg)
+			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, bodyArg, idRunArg, idCodeArg, headerArg)
 		} else {
-			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, idRunArg, idCodeArg)
+			cmd = exec.Command("python", tempDir+"/main.py", paramsArgs, idRunArg, idCodeArg, headerArg)
 		}
 	} else {
 		if bodyArg != "" {
-			cmd = exec.Command("python", tempDir+"/main.py", bodyArg, idRunArg, idCodeArg)
+			cmd = exec.Command("python", tempDir+"/main.py", bodyArg, idRunArg, idCodeArg, headerArg)
 		} else {
-			cmd = exec.Command("python", tempDir+"/main.py", idRunArg, idCodeArg)
+			cmd = exec.Command("python", tempDir+"/main.py", idRunArg, idCodeArg, headerArg)
 		}
 	}
 	var stdout bytes.Buffer

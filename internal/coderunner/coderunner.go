@@ -14,5 +14,6 @@ type UseCase interface {
 		language string,
 		params map[string]interface{},
 		body string,
+		headers map[string]interface{},
 	) (*coderun.CodeRun, error)
 }

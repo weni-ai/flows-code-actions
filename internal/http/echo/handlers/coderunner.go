@@ -41,7 +41,7 @@ func (h *CodeRunnerHandler) RunCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), nil, "")
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), nil, "", nil)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -70,7 +70,7 @@ func (h *CodeRunnerHandler) RunEndpoint(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), nil, "")
+	result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), nil, "", nil)
 	if err != nil {
 		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -107,6 +107,12 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 	res := make(chan error)
 
 	go func() {
+		aheader := map[string]interface{}{}
+
+		for k, v := range c.Request().Header {
+			aheader[k] = v
+		}
+
 		cparams := map[string]interface{}{}
 
 		for k, v := range c.QueryParams() {
@@ -118,7 +124,7 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 
-		result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody))
+		result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody), aheader)
 		if err != nil {
 			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
