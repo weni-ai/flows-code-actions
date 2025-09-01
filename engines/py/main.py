@@ -67,8 +67,8 @@ class Header:
         self._header = header
     def get(self, key):
         if key in self._header:
-            return self._header[key]
-        return None
+            return self._header[key][0]
+        return ""
     def items(self):
         return self._header.items()
 
