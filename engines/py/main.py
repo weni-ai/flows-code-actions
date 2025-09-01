@@ -62,22 +62,48 @@ class Log:
     def error(self, content=""):
         self._create(logtype="error", content=content)
 
+class Header:
+    def __init__(self, header={}):
+        self._header = header
+    def get(self, key):
+        if key in self._header:
+            return self._header[key][0]
+        return ""
+    def items(self):
+        return self._header.items()
+
+class Request:
+    def __init__(self, params=Params({}), body="", log=Log(), header=Header({})):
+        self.header = header
+        self.params = params
+        self.body = body
+        self.log = log
+
 class Engine:
-    def __init__(self, params=Params({}), body="", result=Result(""), log=Log()):
+    def __init__(self, params=Params({}), body="", result=Result(""), log=Log(), header=Header({}), request=Request()):
         self.params = params
         self.body = body
         self.result = result
         self.log = log
+        self.request = request
+        self.header = header
+
+
 
 
 def main():
     parser = argparse.ArgumentParser(description='Parse key-value arguments')
     parser.add_argument('-a', '--arg', type=str, help='Add an argument in the form of key===value')
+    parser.add_argument('-H', '--header', type=str, help='Header content')
     parser.add_argument('-b', '--body', type=str, help='Body content')
     parser.add_argument('-r', '--run', type=str, help='run id')
     parser.add_argument('-c', '--codeid', type=str, help='code id')
 
     args = parser.parse_args()
+    
+    header_dict = {}
+    if args.header != None:
+        header_dict = json.loads(args.header)
     
     params_dict = {}
     if args.arg != None:
@@ -89,12 +115,20 @@ def main():
 
     run_id = args.run.strip()
     code_id = args.codeid.strip()
-    
+
+    header = Header(header_dict)
+    params = Params(params_dict)
+    result = Result(db=db, runId=run_id)
+    log = Log(db=db, runId=run_id, codeId=code_id)
+    request = Request(params=params, body=body, header=header)
+
     engine = Engine(
-        params=Params(params_dict), 
+        params=params, 
         body=body, 
-        result=Result(db=db, runId=run_id),
-        log=Log(db=db, runId=run_id, codeId=code_id)
+        result=result,
+        log=log,
+        header=header,
+        request=request,
     )
     action.Run(engine)
 

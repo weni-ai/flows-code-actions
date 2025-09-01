@@ -28,8 +28,9 @@ type CodeRun struct {
 	Result string                 `bson:"result" json:"result"`
 	Extra  map[string]interface{} `bson:"extra" json:"extra"`
 
-	Params map[string]interface{} `bson:"params" json:"params"`
-	Body   string                 `bson:"body" json:"body"`
+	Params  map[string]interface{} `bson:"params" json:"params"`
+	Body    string                 `bson:"body" json:"body"`
+	Headers map[string]interface{} `bson:"headers" json:"headers"`
 
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`

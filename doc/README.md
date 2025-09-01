@@ -55,7 +55,34 @@ def get_user(user_id):
 
 ### Engine
 
-Through the engine we can access the main attributes and definitions of requests such as `params`, `Body`, `Log` e `Result`.
+Through the engine we can access the main attributes and definitions of requests such as `header`, `params`, `body`, `log` e `result`.
+
+### header
+
+The `header` of the engine refers to the header of the request made for the code action. You can access header values using the `get(<HEADER NAME>)` method.
+
+Example:
+
+```
+curl ... -H 'Custom-Header: custom_header_value'
+```
+
+```python
+custom_header = engine.header.get('Custom-Header')
+print(custom_header) -> "custom_header_value"
+```
+
+or
+
+if not set returns empty string `""`:
+
+```python
+custom_header = engine.header.get('Custom-Header')
+print(custom_header) -> ""
+```
+
+If you need complete header access, use `engine.header.items()`
+
 
 ### body
 
