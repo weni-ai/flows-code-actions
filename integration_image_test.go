@@ -305,6 +305,74 @@ def Run(engine):
 	fmt.Printf("🧹 Código complexo deletado (status: %d)\n", deleteResp.StatusCode)
 }
 
+func (suite *ImageIntegrationTestSuite) TestCreateCodeWithHeaderEmpty() {
+	complexCode := `
+import json
+import datetime
+
+def Run(engine):
+    content_type = engine.header.get('Custom-Header')
+    engine.result.set({"content_type": content_type}, content_type="json")
+`
+
+	// Criar código
+	createURL := suite.baseURL + "/code"
+	req, err := http.NewRequest(http.MethodPost, createURL, bytes.NewBuffer([]byte(complexCode)))
+	suite.Require().NoError(err)
+
+	q := req.URL.Query()
+	q.Add("project_uuid", suite.projectUUID)
+	q.Add("name", "Header Integration Test Empty")
+	q.Add("type", "endpoint")
+	q.Add("language", "python")
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := suite.httpClient.Do(req)
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
+
+	suite.Assert().Equal(http.StatusCreated, resp.StatusCode)
+
+	var createdCode map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&createdCode)
+	suite.Require().NoError(err)
+
+	codeID := createdCode["id"].(string)
+
+	// Executar código com header
+	executeURL := fmt.Sprintf("%s/action/endpoint/%s", suite.baseURL, codeID)
+	execResp, err := suite.httpClient.Post(executeURL, "application/json", nil)
+	suite.Require().NoError(err)
+	defer execResp.Body.Close()
+
+	suite.Assert().Equal(http.StatusOK, execResp.StatusCode)
+
+	var result map[string]interface{}
+	err = json.NewDecoder(execResp.Body).Decode(&result)
+	suite.Require().NoError(err)
+
+	// Verificações detalhadas
+	suite.Assert().Contains(result, "content_type")
+	suite.Assert().Equal("", result["content_type"])
+
+	fmt.Printf("✅ Código com header executado: content_type=%v\n", result["content_type"])
+
+	// Limpar - deletar código criado
+	deleteURL := fmt.Sprintf("%s/code/%s", suite.baseURL, codeID)
+	deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	suite.Require().NoError(err)
+
+	dq := deleteReq.URL.Query()
+	dq.Add("project_uuid", suite.projectUUID)
+	deleteReq.URL.RawQuery = dq.Encode()
+
+	deleteResp, err := suite.httpClient.Do(deleteReq)
+	suite.Require().NoError(err)
+	defer deleteResp.Body.Close()
+
+	fmt.Printf("🧹 Código complexo deletado (status: %d)\n", deleteResp.StatusCode)
+}
+
 func (suite *ImageIntegrationTestSuite) TestListCodes() {
 	// Testar listagem de códigos
 	listURL := suite.baseURL + "/code?project_uuid=" + url.QueryEscape(suite.projectUUID)
