@@ -62,7 +62,10 @@ func (c *ProjectConsumer) Handle(ctx context.Context, eventMsg []byte) error {
 	for _, auths := range evt.Authorizations {
 		userPerm := permission.NewUserPermission(evt.UUID, auths.UserEmail, permission.Role(auths.Role))
 		if _, err := c.permissionService.Create(ctx, userPerm); err != nil {
-			return errors.Wrapf(err, "Error creating user permission on handle event by EDA consumer for user: %v", userPerm)
+			if err.Error() != "user permission already exists" {
+				return errors.Wrapf(err, "Error creating user permission on handle event by EDA consumer for user: %v", userPerm)
+			}
+			log.Error(errors.Wrapf(err, "Error creating user permission on handle event by EDA consumer for user: %v", userPerm))
 		}
 	}
 
