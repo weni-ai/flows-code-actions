@@ -42,7 +42,7 @@ type HTTPConfig struct {
 type DBConfig struct {
 	URI     string
 	Name    string
-	Timeout int64
+	Timeout int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
 }
 
 type OIDCConfig struct {
@@ -129,9 +129,9 @@ func LoadHTTPConfig() HTTPConfig {
 
 func LoadDBConfig() DBConfig {
 	timeout, _ := strconv.ParseInt(
-		Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "15"), 10, 64)
+		Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "35"), 10, 64)
 	if timeout == 0 {
-		timeout = 15
+		timeout = 35
 	}
 	return DBConfig{
 		URI:     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
