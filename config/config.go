@@ -22,6 +22,8 @@ type Config struct {
 	Cleaner            CleanerConfig
 	Blacklist          string
 	Skiplist           string
+
+	HealthCheckCacheTime int64
 }
 
 type RateLimiterConfig struct {
@@ -93,6 +95,8 @@ func NewConfig() *Config {
 		Cleaner:         NewCleanerConfig(),
 		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 		Skiplist:        Getenv("FLOWS_CODE_ACTIONS_SKIPLIST", ""),
+
+		HealthCheckCacheTime: GetenvInt64("FLOWS_CODE_ACTIONS_HEALTH_CHECK_CACHE_TIME", 3),
 	}
 }
 
@@ -207,6 +211,18 @@ func Getenv(key string, defval string) string {
 		return defval
 	}
 	return val
+}
+
+func GetenvInt64(key string, defval int64) int64 {
+	val := os.Getenv(key)
+	if val == "" {
+		return defval
+	}
+	intval, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return defval
+	}
+	return intval
 }
 
 func (c *Config) GetBlackListTerms() []string {

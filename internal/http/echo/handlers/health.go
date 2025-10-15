@@ -46,11 +46,12 @@ var (
 	healthCache      *HealthStatus
 	healthCacheMutex sync.RWMutex
 	lastHealthCheck  time.Time
-	cacheExpiry      = 30 * time.Second
+	cacheExpiry      = 3 * time.Second // default cache expiry example
 	startTime        = time.Now()
 )
 
 func NewHealthHandler(server *serverHttp.Server) *HealthHandler {
+	cacheExpiry = time.Duration(server.Config.HealthCheckCacheTime) * time.Second
 	return &HealthHandler{server: server}
 }
 
@@ -196,7 +197,7 @@ func (h HealthHandler) checkMongoDB(ctx context.Context) Health {
 
 		return Health{
 			Status:    "unhealthy",
-			Message:   fmt.Sprintf("MongoDB ping failed: %v (auto-reconnect enabled)", err.Error()),
+			Message:   fmt.Sprintf("MongoDB ping failed: %v (auto-reconnect enabled by driver default)", err.Error()),
 			Latency:   latency,
 			Timestamp: timestamp,
 		}
