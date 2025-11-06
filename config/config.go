@@ -22,6 +22,8 @@ type Config struct {
 	Cleaner            CleanerConfig
 	Blacklist          string
 	Skiplist           string
+
+	HealthCheckCacheTime int64
 }
 
 type RateLimiterConfig struct {
@@ -42,7 +44,7 @@ type HTTPConfig struct {
 type DBConfig struct {
 	URI     string
 	Name    string
-	Timeout int64
+	Timeout int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
 }
 
 type OIDCConfig struct {
@@ -93,6 +95,8 @@ func NewConfig() *Config {
 		Cleaner:         NewCleanerConfig(),
 		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 		Skiplist:        Getenv("FLOWS_CODE_ACTIONS_SKIPLIST", ""),
+
+		HealthCheckCacheTime: GetenvInt64("FLOWS_CODE_ACTIONS_HEALTH_CHECK_CACHE_TIME", 3),
 	}
 }
 
@@ -129,9 +133,9 @@ func LoadHTTPConfig() HTTPConfig {
 
 func LoadDBConfig() DBConfig {
 	timeout, _ := strconv.ParseInt(
-		Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "15"), 10, 64)
+		Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "35"), 10, 64)
 	if timeout == 0 {
-		timeout = 15
+		timeout = 35
 	}
 	return DBConfig{
 		URI:     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
@@ -207,6 +211,18 @@ func Getenv(key string, defval string) string {
 		return defval
 	}
 	return val
+}
+
+func GetenvInt64(key string, defval int64) int64 {
+	val := os.Getenv(key)
+	if val == "" {
+		return defval
+	}
+	intval, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return defval
+	}
+	return intval
 }
 
 func (c *Config) GetBlackListTerms() []string {

@@ -12,8 +12,9 @@ import (
 )
 
 func GetMongoDatabase(cf *config.Config) (*mongo.Database, error) {
+	contextConnectionTimeout := time.Duration(cf.DB.Timeout) * time.Second
 	mongoClientOptions := options.Client().ApplyURI(cf.DB.URI)
-	ctx, ctxCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, ctxCancel := context.WithTimeout(context.Background(), contextConnectionTimeout)
 	defer ctxCancel()
 
 	mongoClient, err := mongo.Connect(ctx, mongoClientOptions)

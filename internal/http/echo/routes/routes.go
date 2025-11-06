@@ -80,6 +80,7 @@ func Setup(server *s.Server) {
 
 	server.Echo.GET("/", healthHandler.Health)
 	server.Echo.GET("/health", healthHandler.Health)
+	server.Echo.GET("/healthz", healthHandler.HealthCheck) // Simplified health check endpoint for monitoring
 
 	server.Echo.POST("/admin/code", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.CreateCode, permission.WritePermission))
 	server.Echo.PATCH("/admin/code/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codeHandler.UpdateCode, permission.WritePermission))
