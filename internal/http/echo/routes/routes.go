@@ -78,7 +78,7 @@ func Setup(server *s.Server) {
 		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 	}))
 
-	server.Echo.GET("/", healthHandler.Health)
+	server.Echo.GET("/", healthHandler.HealthCheck)
 	server.Echo.GET("/health", healthHandler.Health)
 	server.Echo.GET("/healthz", healthHandler.HealthCheck) // Simplified health check endpoint for monitoring
 
