@@ -42,9 +42,16 @@ type HTTPConfig struct {
 }
 
 type DBConfig struct {
-	URI     string
-	Name    string
-	Timeout int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
+	URI                      string
+	Name                     string
+	Timeout                  int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
+	MaxRetries               int   // Maximum number of connection retry attempts
+	MaxPoolSize              int   // Maximum number of connections in the connection pool
+	MinPoolSize              int   // Minimum number of connections in the connection pool
+	ConnectTimeoutSeconds    int   // Connection timeout in seconds
+	ServerSelectionTimeout   int   // Server selection timeout in seconds
+	SocketTimeoutSeconds     int   // Socket timeout in seconds
+	HeartbeatIntervalSeconds int   // Heartbeat interval in seconds for topology monitoring
 }
 
 type OIDCConfig struct {
