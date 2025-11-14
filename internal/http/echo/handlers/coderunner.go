@@ -127,14 +127,18 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 		result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody), aheader)
 		if err != nil {
 			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+			return
 		}
 
 		statusCode := http.StatusOK
-		if sc, err := result.StatusCode(); err == nil {
-			statusCode = sc
-		}
+		contentType := "string"
 
-		contentType := result.ResponseContentType()
+		if result != nil {
+			if sc, err := result.StatusCode(); err == nil {
+				statusCode = sc
+			}
+			contentType = result.ResponseContentType()
+		}
 		switch contentType {
 		case "json":
 			c.Response().Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -145,7 +149,15 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 		}
 
 		c.Response().WriteHeader(statusCode)
-		_, err = c.Response().Write([]byte(result.Result))
+
+		var resultContent string
+		if result != nil {
+			resultContent = result.Result
+		} else {
+			resultContent = "Internal Server Error"
+		}
+
+		_, err = c.Response().Write([]byte(resultContent))
 		if err != nil {
 			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
