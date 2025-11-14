@@ -131,6 +131,7 @@ def main():
         request=request,
     )
     action.Run(engine)
+    client.close()
 
 if __name__ == "__main__":
     main()
