@@ -63,10 +63,7 @@ func connectToMongoDB(cf *config.Config) (*mongo.Database, error) {
 		SetMaxPoolSize(uint64(cf.DB.MaxPoolSize)).
 		SetMinPoolSize(uint64(cf.DB.MinPoolSize)).
 		SetMaxConnIdleTime(5 * time.Minute).
-
-		// Read preference for replica set resilience
-		// SecondaryPreferred allows reading from secondary if primary is unavailable
-		SetReadPreference(readpref.SecondaryPreferred()).
+		SetReadPreference(readpref.PrimaryPreferred()).
 
 		// Retry settings
 		SetRetryWrites(true).
