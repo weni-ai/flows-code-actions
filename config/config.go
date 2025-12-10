@@ -42,9 +42,16 @@ type HTTPConfig struct {
 }
 
 type DBConfig struct {
-	URI     string
-	Name    string
-	Timeout int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
+	URI                      string
+	Name                     string
+	Timeout                  int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
+	MaxRetries               int   // Maximum number of connection retry attempts
+	MaxPoolSize              int   // Maximum number of connections in the connection pool
+	MinPoolSize              int   // Minimum number of connections in the connection pool
+	ConnectTimeoutSeconds    int   // Connection timeout in seconds
+	ServerSelectionTimeout   int   // Server selection timeout in seconds
+	SocketTimeoutSeconds     int   // Socket timeout in seconds
+	HeartbeatIntervalSeconds int   // Heartbeat interval in seconds for topology monitoring
 }
 
 type OIDCConfig struct {
@@ -137,10 +144,53 @@ func LoadDBConfig() DBConfig {
 	if timeout == 0 {
 		timeout = 35
 	}
+
+	maxRetries, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MAX_RETRIES", "3"))
+	if err != nil {
+		maxRetries = 3
+	}
+
+	maxPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MAX_POOL_SIZE", "100"))
+	if err != nil {
+		maxPoolSize = 100
+	}
+
+	minPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MIN_POOL_SIZE", "5"))
+	if err != nil {
+		minPoolSize = 5
+	}
+
+	connectTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_CONNECT_TIMEOUT", "30"))
+	if err != nil {
+		connectTimeout = 30
+	}
+
+	serverSelectionTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_SERVER_SELECTION_TIMEOUT", "30"))
+	if err != nil {
+		serverSelectionTimeout = 30
+	}
+
+	socketTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_SOCKET_TIMEOUT", "30"))
+	if err != nil {
+		socketTimeout = 30
+	}
+
+	heartbeatInterval, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_HEARTBEAT_INTERVAL", "10"))
+	if err != nil {
+		heartbeatInterval = 10
+	}
+
 	return DBConfig{
-		URI:     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
-		Name:    Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions"),
-		Timeout: timeout,
+		URI:                      Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
+		Name:                     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions"),
+		Timeout:                  timeout,
+		MaxRetries:               maxRetries,
+		MaxPoolSize:              maxPoolSize,
+		MinPoolSize:              minPoolSize,
+		ConnectTimeoutSeconds:    connectTimeout,
+		ServerSelectionTimeout:   serverSelectionTimeout,
+		SocketTimeoutSeconds:     socketTimeout,
+		HeartbeatIntervalSeconds: heartbeatInterval,
 	}
 }
 
