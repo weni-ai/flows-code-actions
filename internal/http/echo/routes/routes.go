@@ -4,18 +4,25 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 	codeRepoMongo "github.com/weni-ai/flows-code-actions/internal/code/mongodb"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	codelogRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelog/mongodb"
+	codelogRepoS3 "github.com/weni-ai/flows-code-actions/internal/codelog/s3"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
 	coderunRepoMongo "github.com/weni-ai/flows-code-actions/internal/coderun/mongodb"
 	"github.com/weni-ai/flows-code-actions/internal/coderunner"
 	s "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
@@ -34,7 +41,11 @@ func Setup(server *s.Server) {
 	coderunService := coderun.NewCodeRunService(coderunRepo)
 	coderunHandler := handlers.NewCodeRunHandler(coderunService)
 
-	codelogRepo := codelogRepoMongo.NewCodeLogRepository(server.DB)
+	// Create CodeLog repository (MongoDB or S3 based on config)
+	codelogRepo, err := createCodeLogRepository(server.Config, server.DB)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to create codelog repository")
+	}
 	codelogService := codelog.NewCodeLogService(codelogRepo)
 	codelogHandler := handlers.NewCodeLogHandler(codelogService, coderunService)
 
@@ -104,4 +115,47 @@ func Setup(server *s.Server) {
 	server.Echo.Use(echoprometheus.NewMiddleware("codeactions"))
 
 	server.Echo.GET("/metrics", echoprometheus.NewHandler())
+}
+
+// createCodeLogRepository creates either MongoDB or S3 repository based on configuration
+func createCodeLogRepository(cfg *config.Config, db *mongo.Database) (codelog.Repository, error) {
+	if cfg.S3.Enabled {
+		return createS3CodeLogRepository(cfg)
+	}
+	return codelogRepoMongo.NewCodeLogRepository(db), nil
+}
+
+// createS3CodeLogRepository creates an S3-based repository
+func createS3CodeLogRepository(cfg *config.Config) (codelog.Repository, error) {
+	if cfg.S3.BucketName == "" {
+		return nil, errors.New("S3 bucket name is required when S3 is enabled")
+	}
+
+	// Create AWS session
+	awsConfig := &aws.Config{
+		Region: aws.String(cfg.S3.Region),
+	}
+
+	// Add credentials if provided
+	if cfg.S3.AccessKeyID != "" && cfg.S3.SecretAccessKey != "" {
+		awsConfig.Credentials = credentials.NewStaticCredentials(
+			cfg.S3.AccessKeyID,
+			cfg.S3.SecretAccessKey,
+			"",
+		)
+	}
+
+	// Set custom endpoint if provided (for LocalStack or other S3-compatible services)
+	if cfg.S3.Endpoint != "" {
+		awsConfig.Endpoint = aws.String(cfg.S3.Endpoint)
+		awsConfig.S3ForcePathStyle = aws.Bool(true) // Required for LocalStack
+		awsConfig.DisableSSL = aws.Bool(true)       // LocalStack uses HTTP by default
+	}
+
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create AWS session")
+	}
+
+	return codelogRepoS3.NewCodeLogRepository(sess, cfg.S3.BucketName, cfg.S3.Prefix), nil
 }
