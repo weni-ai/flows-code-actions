@@ -122,7 +122,8 @@ func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog,
 	}
 
 	// Search across recent dates (last 30 days) for the log
-	now := time.Now()
+	// Use UTC to match Python's timezone when saving logs
+	now := time.Now().UTC()
 	for i := 0; i < 30; i++ {
 		searchDate := now.AddDate(0, 0, -i)
 		prefix := r.generateSearchPrefix("", "", &searchDate)
@@ -189,7 +190,8 @@ func (r *codelogRepo) ListRunLogs(ctx context.Context, runID, codeID string, lim
 	var logs []codelog.CodeLog
 
 	// Search across recent dates (last 7 days for performance)
-	now := time.Now()
+	// Use UTC to match Python's timezone when saving logs
+	now := time.Now().UTC()
 	for i := 0; i < 7; i++ {
 		searchDate := now.AddDate(0, 0, -i)
 		prefix := r.generateSearchPrefix(runID, codeID, &searchDate)
@@ -394,7 +396,8 @@ func (r *codelogRepo) Count(ctx context.Context, runID, codeID string) (int64, e
 	var count int64
 
 	// Count across recent dates (last 30 days)
-	now := time.Now()
+	// Use UTC to match Python's timezone when saving logs
+	now := time.Now().UTC()
 	for i := 0; i < 30; i++ {
 		searchDate := now.AddDate(0, 0, -i)
 		prefix := r.generateSearchPrefix(runID, codeID, &searchDate)

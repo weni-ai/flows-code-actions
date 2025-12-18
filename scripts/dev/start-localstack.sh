@@ -47,7 +47,7 @@ fi
 
 # Executa script de inicialização
 echo "🗂️  Configurando bucket S3..."
-bash localstack/init-s3.sh
+bash scripts/dev/init-s3.sh
 
 echo ""
 echo "🎉 LocalStack configurado com sucesso!"

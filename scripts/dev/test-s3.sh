@@ -36,13 +36,18 @@ cat > $TEST_FILE << EOF
 }
 EOF
 
-# Upload do arquivo usando s3api put-object para evitar problemas de trailer
+# Upload do arquivo usando s3api put-object com configuração para evitar problemas de trailer
 echo "⬆️  Fazendo upload do arquivo..."
-aws --endpoint-url=$ENDPOINT s3api put-object \
+AWS_CLI_FILE_ENCODING=UTF-8 \
+aws --endpoint-url=$ENDPOINT \
+    --cli-connect-timeout 60 \
+    --cli-read-timeout 60 \
+    s3api put-object \
     --bucket $BUCKET \
     --key codeactions/logs/2024/12/10/test-run-id/test-code-id/test-log-id.json \
     --body $TEST_FILE \
-    --content-type application/json
+    --content-type application/json \
+    --metadata test=true
 
 # Lista arquivos no bucket
 echo "📂 Listando arquivos no bucket..."

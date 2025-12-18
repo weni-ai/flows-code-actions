@@ -1,25 +1,15 @@
-import requests
-import json
-
 def Run(engine):
-    for chave, valor in engine.params.items(): # iterates over query string parameters
-        print(f"key: {chave}, value: {valor}")
-        
-    user_id = engine.params.get("user_id") # to get user_id query string param: engine.params.get("<param_key>")
-    user = get_user(user_id)
-
-    if user:
-        engine.result.set(user, conten_type="json")
-        return # return to finish action execution
+    # Teste logs em S3
+    engine.log.info("Teste de log INFO no S3")
+    engine.log.debug("Teste de log DEBUG no S3") 
+    engine.log.error("Teste de log ERROR no S3")
     
-    engine.result.set({"message": "user not found."}, content_type="json")
-
-def get_user(user_id):
-
-  url = f"https://jsonplaceholder.typicode.com/users/{user_id}"
-  response = requests.get(url)
-
-  if response.status_code == 200:
-    return response.text
-  else:
-    return None
+    # Log com conteúdo longo
+    long_content = "Este é um teste de log longo. " * 100
+    engine.log.info(f"Log longo: {long_content}")
+    
+    # Resultado
+    engine.result.set({
+        "message": "Logs enviados para S3 com sucesso!",
+        "timestamp": "2024-12-15T22:00:00Z"
+    }, content_type="json")
