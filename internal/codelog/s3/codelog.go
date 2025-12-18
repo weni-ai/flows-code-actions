@@ -146,9 +146,11 @@ func (r *codelogRepo) searchLogByID(ctx context.Context, prefix, logID string) (
 		Prefix: aws.String(prefix),
 	}
 
+	var foundKey string
 	err := r.s3Client.ListObjectsV2PagesWithContext(ctx, input, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
 		for _, obj := range page.Contents {
 			if strings.Contains(*obj.Key, logID+".json") {
+				foundKey = *obj.Key // Store the actual key found
 				return false // Found it, stop pagination
 			}
 		}
@@ -159,9 +161,12 @@ func (r *codelogRepo) searchLogByID(ctx context.Context, prefix, logID string) (
 		return nil, err
 	}
 
-	// If we found the object, retrieve it
-	key := prefix + logID + ".json"
-	return r.getLogFromS3(ctx, key)
+	// If we found the object, retrieve it using the actual key
+	if foundKey == "" {
+		return nil, nil // Not found in this prefix
+	}
+	
+	return r.getLogFromS3(ctx, foundKey)
 }
 
 func (r *codelogRepo) getLogFromS3(ctx context.Context, key string) (*codelog.CodeLog, error) {
