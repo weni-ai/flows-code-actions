@@ -30,3 +30,4 @@ __debug*
 venv/
 env/
 .vscode/
+launch.json

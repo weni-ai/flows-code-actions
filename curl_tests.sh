@@ -5,9 +5,10 @@
 # ==============================================================================
 
 # Configurações
-HOST="localhost:8050"
-AUTH_TOKEN="Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJSWG9JMzJ4cno3Y3M5bHVTazl3RC1melNWZGZXbjFQeEJnYzVuaDRhU2pNIn0.eyJleHAiOjE3MjYwMDE3NDQsImlhdCI6MTcyNjAwMTQ0NCwianRpIjoiMWE1MzgwYTgtN2Y5ZS00ZDcwLTkwZWItODI1MGYzOWNlYzEwIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo3MDgwL3JlYWxtcy9mbG93c19kZXZfbG9jYWwiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMGM0MjYwMGItMzBmOS00YmNkLTg5MGEtOTM0MGIyY2IwOTRkIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiY29kZWFjdGlvbnNfaWQiLCJzaWQiOiJjN2IwODE1NS04ZWYwLTRhM2EtOTM2MS1iODg4ZjNkMjBlN2UiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIi8qIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiZGVmYXVsdC1yb2xlcy1mbG93c19kZXZfbG9jYWwiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJ1c2VyMSB1c2VyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoidXNlcjEiLCJnaXZlbl9uYW1lIjoidXNlcjEiLCJmYW1pbHlfbmFtZSI6InVzZXIiLCJlbWFpbCI6InVzZXIxQGVtYWlsLmNvbSJ9.gLB3hHHJYRnTpBZiulgV74EO6x_6snRmVPmOrnuOQQ5XB7U8r6ckHnOPtAv7_y25aO5D0QRxF_955Pd11iOQw_EqeQN3bMOrPDznAae8SgxQKhs1XuYIQ98n05DiylA4VfpWaShmTHEK5-mjdXjQxJ_FLOtutThx_9E-lRjvjRrvepffpJkdyof8tmmpMEop8-k53BmF09rSFZl7LCFwqN_hZ3vomDcwpGDmfOFRLIKHOUf4a5TBBBOMcyu-gTxySgHG43LYq3H7XIR-AhuHBJ2eLcl-O0B-eyqvTcIIc2AzDT9RHXXtpizeACADMWq5PMtfcdXhcGhGzbuXQZ6J3A"
-PROJECT_UUID="815af923-6994-47b0-b460-e050f08d965a"
+# HOST="https://code-actions.stg.cloud.weni.ai"
+HOST="http://localhost:8050"
+AUTH_TOKEN="Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJnTFNiNm93ZTF4WEN5QVN4c0NIeGxNdXNhcER0WXVxNTVOcTl4akc4X3FzIn0.eyJleHAiOjE3NjYxMzcwMTEsImlhdCI6MTc2NjA5MzgxMSwiYXV0aF90aW1lIjoxNzY2MDkzODA5LCJqdGkiOiJvZnJ0YWM6OTdlNWU3OGMtODJhOC02ZGM0LTNlNzItZWZjYjBkOTg3ZWI1IiwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy53ZW5pLmFpL2F1dGgvcmVhbG1zL3dlbmktc3RhZ2luZyIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI5M2RkNjc0MC04MjczLTRkMjAtODNhZS05ZTU2NzE1ZmVmMWIiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ3ZW5pLXdlYmFwcCIsInNpZCI6ImM3NWEyYTU1LTU5MjItNGNhMi1hODRkLTVlMGE0ZTU4MmQxYSIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIG9wZW5pZCBvZmZsaW5lX2FjY2VzcyIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IlJhZmFlbCBTb2FyZXMiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJyYWZhZWwuc29hcmVzQHdlbmkuYWkiLCJnaXZlbl9uYW1lIjoiUmFmYWVsIiwiZmFtaWx5X25hbWUiOiJTb2FyZXMiLCJlbWFpbCI6InJhZmFlbC5zb2FyZXNAd2VuaS5haSJ9.fuPWdHB7bd-0XWFc3AZorFVX3_n18_p-CNLEUGahGYdocISlztxTmWWuznV74jjWiX_v43TapMJKUL9aDlmFWd3Vvkp-g_vExwWEhPhlLujdO5qT_OIj0n7QkPBz-FfIlussDr4RX-i0BVEX-JJW2grJ6OQfev7AYfLgOLgb1cRwsU85rP0wrZgiM2l1oDKWUGrIydtHEyTD08gD9zZJk4Md0dKTUAsipMwxOFFLGutGqbF-XzgOQYF7-2J37o4AoUuqoCQXoSJs-rbGFKFZ82ZA8GZUnWnqSGRMWWITmZ7FyPfwz6vkRf6BibdF07QZNJBIgm5-e-6HpLWcCC2j0w"
+PROJECT_UUID="fa147fa6-5af0-4d99-9c00-043c89d97392"
 
 echo "==== TESTANDO API CODE ACTIONS ===="
 echo ""
@@ -91,7 +92,7 @@ def Run(engine):
 
 # Criar código Python com logs (tipo endpoint para compatibilidade com /action/endpoint/)
 RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-  -X POST "http://${HOST}/code?name=Código%20com%20Logs&language=python&type=endpoint&project_uuid=${PROJECT_UUID}" \
+  -X POST "${HOST}/code?name=Código%20com%20Logs&language=python&type=endpoint&project_uuid=${PROJECT_UUID}" \
   -H "Authorization: ${AUTH_TOKEN}" \
   -H "Content-Type: text/plain" \
   --data-raw "${PYTHON_CODE_WITH_LOGS}")
@@ -127,7 +128,7 @@ fi
 # Executar via action/endpoint (funciona com qualquer tipo de código)
 echo "🚀 Executando via /action/endpoint/ (bypassa bugs do coderunner)..."
 EXECUTION_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-  -X POST "http://${HOST}/action/endpoint/${CODE_ID}?test_param=action_value&execution_mode=manual" \
+  -X POST "${HOST}/action/endpoint/${CODE_ID}?test_param=action_value&execution_mode=manual" \
   -H "Content-Type: application/json" \
   -H "X-Test-Header: action-execution" \
   -H "X-Execution-Source: curl-test" \
@@ -158,6 +159,11 @@ echo ""
 echo "=============================================================================="
 echo ""
 
+# wait 2 seconds
+sleep 2
+echo "2 segundos de espera..."
+
+
 # ==============================================================================
 # 3. CONSULTAR RUNS DO CÓDIGO EXECUTADO
 # ==============================================================================
@@ -170,7 +176,7 @@ else
     # Consultar por code_id (parâmetro obrigatório do endpoint)
     echo "📋 Listando todas as execuções por code_id: $CODE_ID"
     RUNS_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-      -X GET "http://${HOST}/coderun?code_id=${CODE_ID}" \
+      -X GET "${HOST}/coderun?code_id=${CODE_ID}" \
       -H "Authorization: ${AUTH_TOKEN}")
 
 HTTP_STATUS=$(echo "$RUNS_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
@@ -182,7 +188,7 @@ if [ "$HTTP_STATUS" = "200" ]; then
     
     # Tentar extrair o primeiro RUN_ID da lista se não temos um
     if [ -z "$RUN_ID" ]; then
-        RUN_ID=$(echo "$RUNS_BODY" | jq -r '.data[0].id // empty')
+        RUN_ID=$(echo "$RUNS_BODY" | jq -r '.[0].id // empty')
         if [ ! -z "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
             echo "🏃 Primeiro RUN_ID encontrado: $RUN_ID"
         else
@@ -199,7 +205,7 @@ if [ ! -z "$RUN_ID" ]; then
     echo ""
     echo "🔍 Consultando detalhes do run específico..."
     RUN_DETAIL_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-      -X GET "http://${HOST}/coderun/${RUN_ID}" \
+      -X GET "${HOST}/coderun/${RUN_ID}" \
       -H "Authorization: ${AUTH_TOKEN}")
     
     HTTP_STATUS=$(echo "$RUN_DETAIL_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
@@ -231,7 +237,7 @@ else
     # Consultar todos os logs por code_id
     echo "📋 Listando todos os logs por code_id: $CODE_ID"
     LOGS_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-      -X GET "http://${HOST}/codelog?code_id=${CODE_ID}" \
+      -X GET "${HOST}/codelog?code_id=${CODE_ID}" \
       -H "Authorization: ${AUTH_TOKEN}")
 
 HTTP_STATUS=$(echo "$LOGS_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
@@ -267,7 +273,7 @@ if [ ! -z "$LOG_ID" ]; then
     echo ""
     echo "🔍 Consultando detalhes do log específico..."
     LOG_DETAIL_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-      -X GET "http://${HOST}/codelog/${LOG_ID}" \
+      -X GET "${HOST}/codelog/${LOG_ID}" \
       -H "Authorization: ${AUTH_TOKEN}")
     
     HTTP_STATUS=$(echo "$LOG_DETAIL_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
@@ -337,50 +343,50 @@ echo "🛠️ COMANDOS EXTRAS PARA DEBUG:"
 echo ""
 
 echo "# Verificar saúde da aplicação:"
-echo "curl -X GET \"http://${HOST}/health\""
+echo "curl -X GET \"${HOST}/health\""
 echo ""
 
 echo "# Listar todos os códigos do projeto:"
-echo "curl -X GET \"http://${HOST}/code?project_uuid=${PROJECT_UUID}\" \\"
+echo "curl -X GET \"${HOST}/code?project_uuid=${PROJECT_UUID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\""
 echo ""
 
 echo "# Listar execuções de um código específico:"
-echo "curl -X GET \"http://${HOST}/coderun?code_id=\${CODE_ID}\" \\"
+echo "curl -X GET \"${HOST}/coderun?code_id=\${CODE_ID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\""
 echo ""
 
 echo "# Listar logs de um código específico:"
-echo "curl -X GET \"http://${HOST}/codelog?code_id=\${CODE_ID}\" \\"
+echo "curl -X GET \"${HOST}/codelog?code_id=\${CODE_ID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\""
 echo ""
 
 echo "# Consultar código específico:"
-echo "curl -X GET \"http://${HOST}/code/\${CODE_ID}\" \\"
+echo "curl -X GET \"${HOST}/code/\${CODE_ID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\""
 echo ""
 
 echo "# Criar código tipo ENDPOINT para testes de execução:"
-echo "curl -X POST \"http://${HOST}/code?name=Endpoint%20Test&language=python&type=endpoint&project_uuid=${PROJECT_UUID}\" \\"
+echo "curl -X POST \"${HOST}/code?name=Endpoint%20Test&language=python&type=endpoint&project_uuid=${PROJECT_UUID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\" \\"
 echo "  -H \"Content-Type: text/plain\" \\"
 echo "  --data-raw 'def Run(engine): engine.result.set({\"message\": \"Hello from endpoint!\"}, content_type=\"json\")'"
 echo ""
 
 echo "# Executar via /run/ (apenas se corrigido o bug):"
-echo "curl -X POST \"http://${HOST}/run/\${CODE_ID}\" \\"
+echo "curl -X POST \"${HOST}/run/\${CODE_ID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\" \\"
 echo "  -H \"Content-Type: application/json\""
 echo ""
 
 echo "# Executar endpoint (se for type=endpoint):"
-echo "curl -X POST \"http://${HOST}/endpoint/\${CODE_ID}\" \\"
+echo "curl -X POST \"${HOST}/endpoint/\${CODE_ID}\" \\"
 echo "  -H \"Content-Type: application/json\" \\"
 echo "  -d '{\"test_data\": \"value\"}'"
 echo ""
 
 echo "# Executar action endpoint com rate limiting (usado no script):"
-echo "curl -X POST \"http://${HOST}/action/endpoint/\${CODE_ID}?param=value\" \\"
+echo "curl -X POST \"${HOST}/action/endpoint/\${CODE_ID}?param=value\" \\"
 echo "  -H \"Content-Type: application/json\" \\"
 echo "  -H \"X-Custom-Header: value\" \\"
 echo "  -d '{\"action_data\": \"value\"}'"

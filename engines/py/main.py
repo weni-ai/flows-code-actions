@@ -164,26 +164,36 @@ class Log:
         self._db = db
         self._runId = runId
         self._codeId = codeId
+        self._log_queue = []  # Queue to store logs until flush
 
     def _create(self, logtype="", content=""):
-        """Create a log entry using S3 if enabled, otherwise fallback to MongoDB"""
+        """Queue a log entry to be processed later"""
+        log_entry = {
+            "type": logtype,
+            "content": str(content),
+            "timestamp": datetime.datetime.now()
+        }
+        self._log_queue.append(log_entry)
+        return f"queued_log_{len(self._log_queue)}"  # Return a placeholder ID
+    
+    def _process_log(self, logtype, content, timestamp):
+        """Actually create a log entry using S3 if enabled, otherwise fallback to MongoDB"""
         if s3_enabled and s3_client:
             # Use S3 implementation
-            log_id = create_codelog_s3(self._runId, self._codeId, logtype, str(content))
+            log_id = create_codelog_s3(self._runId, self._codeId, logtype, content)
             if log_id:
                 return log_id
             # If S3 fails, fallback to MongoDB
         
         # MongoDB implementation (original behavior or fallback)
         try:
-            now = datetime.datetime.now()
             log = {
                 "run_id": ObjectId(self._runId), 
                 "code_id": ObjectId(self._codeId), 
                 "type": logtype, 
-                "content": str(content)[:8000],  # Match the 8000 char limit
-                "created_at": now, 
-                "updated_at": now
+                "content": content[:8000],  # Match the 8000 char limit
+                "created_at": timestamp, 
+                "updated_at": timestamp
             }
             result = self._db["codelog"].insert_one(log)
             print(f"Log saved to MongoDB: {result.inserted_id}")
@@ -191,6 +201,31 @@ class Log:
         except Exception as e:
             print(f"Failed to save log to MongoDB: {e}")
             return None
+    
+    def flush_logs(self):
+        """Process all queued logs"""
+        processed_count = 0
+        failed_count = 0
+        
+        print(f"Processing {len(self._log_queue)} queued logs...")
+        
+        for log_entry in self._log_queue:
+            try:
+                log_id = self._process_log(
+                    log_entry["type"], 
+                    log_entry["content"], 
+                    log_entry["timestamp"]
+                )
+                if log_id:
+                    processed_count += 1
+                else:
+                    failed_count += 1
+            except Exception as e:
+                print(f"Failed to process log: {e}")
+                failed_count += 1
+        
+        print(f"Log processing complete: {processed_count} successful, {failed_count} failed")
+        self._log_queue.clear()  # Clear the queue after processing
 
     def debug(self, content=""):
         """Create a debug log entry"""
@@ -272,7 +307,17 @@ def main():
         header=header,
         request=request,
     )
-    action.Run(engine)
+    try:
+        action.Run(engine)
+    except Exception as e:
+        print(f"Error during action execution: {e}")
+        # Log the error to the queue
+        log.error(f"Action execution failed: {str(e)}")
+    
+    # Process all queued logs at the end
+    print("Flushing logs...")
+    log.flush_logs()
+    
     client.close()
 
 if __name__ == "__main__":
