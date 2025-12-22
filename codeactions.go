@@ -16,25 +16,39 @@ import (
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
+	codelibRepoPG "github.com/weni-ai/flows-code-actions/internal/codelib/pg"
 	"github.com/weni-ai/flows-code-actions/internal/db"
+	"github.com/weni-ai/flows-code-actions/internal/db/postgre"
 	"github.com/weni-ai/flows-code-actions/internal/eventdriven/rabbitmq"
 	server "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/routes"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
 	permRepoMongo "github.com/weni-ai/flows-code-actions/internal/permission/mongodb"
+	permRepoPG "github.com/weni-ai/flows-code-actions/internal/permission/pg"
 	"github.com/weni-ai/flows-code-actions/internal/project"
 	projRepoMongo "github.com/weni-ai/flows-code-actions/internal/project/mongodb"
+	projRepoPG "github.com/weni-ai/flows-code-actions/internal/project/pg"
 )
 
 func Start(cfg *config.Config) {
 	codeactions := server.NewServer(cfg)
 
-	db, err := db.GetMongoDatabase(cfg)
-	if err != nil {
-		log.WithError(err).Fatal(err)
+	// Setup database based on type
+	if cfg.DB.Type == "postgres" {
+		log.Info("Using PostgreSQL database")
+		sqlDB, err := postgre.GetPostgreDatabase(cfg)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to connect to PostgreSQL")
+		}
+		codeactions.SQLDB = sqlDB
+	} else {
+		log.Info("Using MongoDB database")
+		mongoDB, err := db.GetMongoDatabase(cfg)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to connect to MongoDB")
+		}
+		codeactions.DB = mongoDB
 	}
-
-	codeactions.DB = db
 
 	redisURL, _ := url.Parse(cfg.Redis)
 	rdb, err := strconv.Atoi(strings.TrimLeft(redisURL.Path, "/"))
@@ -78,16 +92,31 @@ func Start(cfg *config.Config) {
 	if cfg.EDA.RabbitmqURL != "" {
 		eda := rabbitmq.NewEDA(cfg.EDA.RabbitmqURL)
 
-		permissionService := permission.NewUserPermissionService(
-			permRepoMongo.NewUserRepository(db),
-		)
+		var permissionService permission.UserPermissionUseCase
+		var projectService project.UseCase
+
+		if cfg.DB.Type == "postgres" {
+			// Use PostgreSQL repositories
+			permissionService = permission.NewUserPermissionService(
+				permRepoPG.NewUserRepository(codeactions.SQLDB),
+			)
+			projectService = project.NewProjectService(
+				projRepoPG.NewProjectRepository(codeactions.SQLDB),
+			)
+		} else {
+			// Use MongoDB repositories
+			permissionService = permission.NewUserPermissionService(
+				permRepoMongo.NewUserRepository(codeactions.DB),
+			)
+			projectService = project.NewProjectService(
+				projRepoMongo.NewProjectRepository(codeactions.DB),
+			)
+		}
 
 		server.Permission = server.NewEchoPermissionHandler(permissionService)
 
 		projectConsumer := project.NewProjectConsumer(
-			project.NewProjectService(
-				projRepoMongo.NewProjectRepository(db),
-			),
+			projectService,
 			permissionService,
 			cfg.EDA.ProjectExchangeName,
 			cfg.EDA.ProjectQueueName,
@@ -120,7 +149,14 @@ func Start(cfg *config.Config) {
 }
 
 func SetupLibs(s *server.Server) error {
-	codelibRepo := codelibRepoMongo.NewCodeLibRepo(s.DB)
+	var codelibRepo codelib.Repository
+
+	if s.Config.DB.Type == "postgres" {
+		codelibRepo = codelibRepoPG.NewCodeLibRepo(s.SQLDB)
+	} else {
+		codelibRepo = codelibRepoMongo.NewCodeLibRepo(s.DB)
+	}
+
 	codelibService := codelib.NewCodeLibService(codelibRepo)
 
 	{ // setup py libs

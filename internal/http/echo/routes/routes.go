@@ -7,11 +7,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/weni-ai/flows-code-actions/internal/code"
 	codeRepoMongo "github.com/weni-ai/flows-code-actions/internal/code/mongodb"
+	codeRepoPG "github.com/weni-ai/flows-code-actions/internal/code/pg"
+	"github.com/weni-ai/flows-code-actions/internal/codelib"
 	codelibRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelib/mongodb"
+	codelibRepoPG "github.com/weni-ai/flows-code-actions/internal/codelib/pg"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	codelogRepoMongo "github.com/weni-ai/flows-code-actions/internal/codelog/mongodb"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
 	coderunRepoMongo "github.com/weni-ai/flows-code-actions/internal/coderun/mongodb"
+	coderunRepoPG "github.com/weni-ai/flows-code-actions/internal/coderun/pg"
 	"github.com/weni-ai/flows-code-actions/internal/coderunner"
 	s "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
@@ -25,16 +29,33 @@ import (
 func Setup(server *s.Server) {
 	healthHandler := handlers.NewHealthHandler(server)
 
-	codeRepo := codeRepoMongo.NewCodeRepository(server.DB)
-	codelibRepo := codelibRepoMongo.NewCodeLibRepo(server.DB)
+	// Setup repositories based on database type
+	var codeRepo code.Repository
+	var codelibRepo codelib.Repository
+	var coderunRepo coderun.Repository
+	var codelogRepo codelog.Repository
+
+	if server.Config.DB.Type == "postgres" {
+		// Use PostgreSQL repositories
+		pgDB := server.SQLDB
+		codeRepo = codeRepoPG.NewCodeRepository(pgDB)
+		codelibRepo = codelibRepoPG.NewCodeLibRepo(pgDB)
+		coderunRepo = coderunRepoPG.NewCodeRunRepository(pgDB)
+	} else {
+		// Use MongoDB repositories (default)
+		mongoDB := server.DB
+		codeRepo = codeRepoMongo.NewCodeRepository(mongoDB)
+		codelibRepo = codelibRepoMongo.NewCodeLibRepo(mongoDB)
+		coderunRepo = coderunRepoMongo.NewCodeRunRepository(mongoDB)
+		codelogRepo = codelogRepoMongo.NewCodeLogRepository(mongoDB)
+	}
+
 	codeService := code.NewCodeService(server.Config, codeRepo, codelibRepo)
 	codeHandler := handlers.NewCodeHandler(codeService)
 
-	coderunRepo := coderunRepoMongo.NewCodeRunRepository(server.DB)
 	coderunService := coderun.NewCodeRunService(coderunRepo)
 	coderunHandler := handlers.NewCodeRunHandler(coderunService)
 
-	codelogRepo := codelogRepoMongo.NewCodeLogRepository(server.DB)
 	codelogService := codelog.NewCodeLogService(codelogRepo)
 	codelogHandler := handlers.NewCodeLogHandler(codelogService, coderunService)
 
