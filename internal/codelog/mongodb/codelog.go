@@ -58,7 +58,10 @@ func (r *codelogRepo) Create(ctx context.Context, codelog *codelog.CodeLog) (*co
 	if err != nil {
 		return nil, err
 	}
-	codelog.ID = result.InsertedID.(primitive.ObjectID)
+	// Convert ObjectID to string
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		codelog.ID = oid.Hex()
+	}
 	return codelog, err
 }
 
@@ -168,15 +171,20 @@ func (r *codelogRepo) DeleteOlder(ctx context.Context, date time.Time, limit int
 	}
 
 	if len(logs) > 0 {
-		ids := make([]primitive.ObjectID, len(logs))
-		for i, log := range logs {
-			ids[i] = log.ID
+		ids := make([]primitive.ObjectID, 0, len(logs))
+		for _, log := range logs {
+			// Convert string ID to ObjectID
+			if oid, err := primitive.ObjectIDFromHex(log.ID); err == nil {
+				ids = append(ids, oid)
+			}
 		}
-		result, err := r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
-		if err != nil {
-			return 0, fmt.Errorf("failed to delete logs: %v", err)
+		if len(ids) > 0 {
+			result, err := r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
+			if err != nil {
+				return 0, fmt.Errorf("failed to delete logs: %v", err)
+			}
+			return result.DeletedCount, nil
 		}
-		return result.DeletedCount, nil
 	}
 	return 0, nil
 }

@@ -74,8 +74,8 @@ func (r *codelogRepo) generateSearchPrefix(runID, codeID string, date *time.Time
 
 func (r *codelogRepo) Create(ctx context.Context, log *codelog.CodeLog) (*codelog.CodeLog, error) {
 	// Generate new ID if not present
-	if log.ID.IsZero() {
-		log.ID = primitive.NewObjectID()
+	if log.ID == "" {
+		log.ID = primitive.NewObjectID().Hex()
 	}
 
 	// Set timestamps
@@ -89,8 +89,8 @@ func (r *codelogRepo) Create(ctx context.Context, log *codelog.CodeLog) (*codelo
 		return nil, errors.Wrap(err, "failed to marshal log to JSON")
 	}
 
-	// Generate S3 key
-	key := r.generateKey(log.RunID.Hex(), log.CodeID.Hex(), log.ID.Hex(), now)
+	// Generate S3 key - IDs are now strings (UUIDs or ObjectID hex)
+	key := r.generateKey(log.RunID, log.CodeID, log.ID, now)
 
 	// Upload to S3
 	_, err = r.s3Client.PutObjectWithContext(ctx, &s3.PutObjectInput{
@@ -99,8 +99,8 @@ func (r *codelogRepo) Create(ctx context.Context, log *codelog.CodeLog) (*codelo
 		Body:        bytes.NewReader(logData),
 		ContentType: aws.String("application/json"),
 		Metadata: map[string]*string{
-			"run-id":     aws.String(log.RunID.Hex()),
-			"code-id":    aws.String(log.CodeID.Hex()),
+			"run-id":     aws.String(log.RunID),
+			"code-id":    aws.String(log.CodeID),
 			"log-type":   aws.String(string(log.Type)),
 			"created-at": aws.String(now.Format(time.RFC3339)),
 		},
@@ -116,9 +116,8 @@ func (r *codelogRepo) Create(ctx context.Context, log *codelog.CodeLog) (*codelo
 func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog, error) {
 	// Since we don't know the exact path, we need to search for the log
 	// This is less efficient than MongoDB but still workable
-	logID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid log ID")
+	if id == "" {
+		return nil, errors.New("invalid log ID: empty string")
 	}
 
 	// Search across recent dates (last 30 days) for the log
@@ -128,7 +127,7 @@ func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog,
 		searchDate := now.AddDate(0, 0, -i)
 		prefix := r.generateSearchPrefix("", "", &searchDate)
 
-		log, err := r.searchLogByID(ctx, prefix, logID.Hex())
+		log, err := r.searchLogByID(ctx, prefix, id)
 		if err != nil {
 			continue // Try next date
 		}
@@ -257,10 +256,10 @@ func (r *codelogRepo) listLogsFromPrefix(ctx context.Context, prefix, runID, cod
 			}
 
 			// Double-check filtering (in case path structure doesn't match)
-			if runID != "" && log.RunID.Hex() != runID {
+			if runID != "" && log.RunID != runID {
 				continue
 			}
-			if codeID != "" && log.CodeID.Hex() != codeID {
+			if codeID != "" && log.CodeID != codeID {
 				continue
 			}
 
@@ -285,7 +284,7 @@ func (r *codelogRepo) Update(ctx context.Context, id, content string) (*codelog.
 
 	// Delete old version and create new one
 	// Note: This is not atomic, but S3 doesn't support atomic updates
-	oldKey := r.generateKey(log.RunID.Hex(), log.CodeID.Hex(), log.ID.Hex(), log.CreatedAt)
+	oldKey := r.generateKey(log.RunID, log.CodeID, log.ID, log.CreatedAt)
 
 	// Upload updated version
 	logData, err := json.Marshal(log)
@@ -293,7 +292,7 @@ func (r *codelogRepo) Update(ctx context.Context, id, content string) (*codelog.
 		return nil, errors.Wrap(err, "failed to marshal updated log")
 	}
 
-	newKey := r.generateKey(log.RunID.Hex(), log.CodeID.Hex(), log.ID.Hex(), log.UpdatedAt)
+	newKey := r.generateKey(log.RunID, log.CodeID, log.ID, log.UpdatedAt)
 
 	_, err = r.s3Client.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(r.bucketName),
@@ -301,8 +300,8 @@ func (r *codelogRepo) Update(ctx context.Context, id, content string) (*codelog.
 		Body:        bytes.NewReader(logData),
 		ContentType: aws.String("application/json"),
 		Metadata: map[string]*string{
-			"run-id":     aws.String(log.RunID.Hex()),
-			"code-id":    aws.String(log.CodeID.Hex()),
+			"run-id":     aws.String(log.RunID),
+			"code-id":    aws.String(log.CodeID),
 			"log-type":   aws.String(string(log.Type)),
 			"updated-at": aws.String(log.UpdatedAt.Format(time.RFC3339)),
 		},
@@ -330,7 +329,7 @@ func (r *codelogRepo) Delete(ctx context.Context, id string) error {
 		return err
 	}
 
-	key := r.generateKey(log.RunID.Hex(), log.CodeID.Hex(), log.ID.Hex(), log.CreatedAt)
+	key := r.generateKey(log.RunID, log.CodeID, log.ID, log.CreatedAt)
 
 	_, err = r.s3Client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(r.bucketName),

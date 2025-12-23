@@ -44,7 +44,7 @@ func Start(cfg *config.Config) {
 	} else {
 		log.Info("Using MongoDB database")
 		mongoDB, err := db.GetMongoDatabase(cfg)
-		if err != nil {
+	if err != nil {
 			log.WithError(err).Fatal("Failed to connect to MongoDB")
 		}
 		codeactions.DB = mongoDB
@@ -107,7 +107,7 @@ func Start(cfg *config.Config) {
 			// Use MongoDB repositories
 			permissionService = permission.NewUserPermissionService(
 				permRepoMongo.NewUserRepository(codeactions.DB),
-			)
+		)
 			projectService = project.NewProjectService(
 				projRepoMongo.NewProjectRepository(codeactions.DB),
 			)

@@ -1,20 +1,28 @@
 import os
-import pymongo
-from bson.objectid import ObjectId
 import datetime
 import json
 import boto3
 import uuid
 from urllib.parse import urljoin
 import requests
+import psycopg2
+import psycopg2.extras
 
 import argparse
 import action
 
-dburl = os.environ.get("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017")
-dbname = os.environ.get("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions")
-client = pymongo.MongoClient(dburl)
-db = client[dbname]
+# PostgreSQL configuration
+pg_database = os.environ.get("FLOWS_CODE_ACTIONS_DB_NAME", "code-actions")
+pg_uri = os.environ.get("FLOWS_CODE_ACTIONS_DB_URI", "postgres://localhost:5432/codeactions?sslmode=disable")
+
+# Initialize PostgreSQL connection
+pg_conn = None
+try:
+    pg_conn = psycopg2.connect(pg_uri)
+    print(f"PostgreSQL connected - database: {pg_database}")
+except Exception as e:
+    print(f"Failed to connect to PostgreSQL: {e}")
+    pg_conn = None
 
 # S3 configuration
 s3_enabled = os.environ.get("FLOWS_CODE_ACTIONS_S3_ENABLED", "false").lower() == "true"
@@ -22,8 +30,8 @@ s3_endpoint = os.environ.get("FLOWS_CODE_ACTIONS_S3_ENDPOINT")
 s3_region = os.environ.get("FLOWS_CODE_ACTIONS_S3_REGION", "us-east-1")
 s3_bucket = os.environ.get("FLOWS_CODE_ACTIONS_S3_BUCKET_NAME")
 s3_prefix = os.environ.get("FLOWS_CODE_ACTIONS_S3_PREFIX", "codeactions")
-s3_access_key = os.environ.get("FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID")
-s3_secret_key = os.environ.get("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY")
+s3_access_key = os.environ.get("FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID", "test")
+s3_secret_key = os.environ.get("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY", "test")
 
 # Initialize S3 client if enabled
 s3_client = None
@@ -82,8 +90,8 @@ def create_codelog_s3(run_id, code_id, log_type, content):
         return None
     
     try:
-        # Generate new ObjectID for the log
-        log_id = str(ObjectId())
+        # Generate new UUID v4 for the log
+        log_id = str(uuid.uuid4())
         
         # Create timestamps
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -138,11 +146,12 @@ class Params:
         return self._params.items()
     
 class Result:
-    def __init__(self, result=None, db=None, runId=None):
+    def __init__(self, result=None, runId=None, pg_conn=None):
         self._result = result
-        self._db = db
         self._runId = runId
         self._extra = None
+        self._pg_conn = pg_conn
+        
     def set(self, value="", status_code=200, content_type="text"):
         if isinstance(value, str):
             self._result = value
@@ -154,14 +163,48 @@ class Result:
 
         self._extra = {"status_code": status_code, "content_type": content_type}
         self.save()
+        
     def save(self):
-        result = db["coderun"].update_one({"_id": ObjectId(self._runId)}, {"$set": {"result": self._result, "extra": self._extra}})
-        if result.modified_count == 1:
-            print("result saved!")
+        """Save result to PostgreSQL"""
+        if not self._pg_conn:
+            print("Error: PostgreSQL connection not available")
+            return
+            
+        try:
+            cursor = self._pg_conn.cursor()
+            
+            # Convert extra dict to JSON string for PostgreSQL JSONB
+            extra_json = json.dumps(self._extra) if self._extra else None
+            
+            # Update coderuns table in PostgreSQL
+            # Using id::text to handle UUID comparison properly
+            cursor.execute(
+                """
+                UPDATE coderuns 
+                SET result = %s, 
+                    extra = %s::jsonb, 
+                    updated_at = NOW()
+                WHERE id::text = %s
+                """,
+                (self._result, extra_json, self._runId)
+            )
+            
+            self._pg_conn.commit()
+            
+            if cursor.rowcount > 0:
+                print(f"Result saved to PostgreSQL! (run_id: {self._runId})")
+            else:
+                print(f"Warning: No rows updated in PostgreSQL for run_id: {self._runId}")
+            
+            cursor.close()
+        except Exception as e:
+            print(f"Failed to save result to PostgreSQL: {e}")
+            # Rollback on error
+            if self._pg_conn:
+                self._pg_conn.rollback()
 
 class Log:
-    def __init__(self, db=None, runId=None, codeId=None):
-        self._db = db
+    def __init__(self, runId=None, codeId=None):
         self._runId = runId
         self._codeId = codeId
         self._log_queue = []  # Queue to store logs until flush
@@ -177,30 +220,18 @@ class Log:
         return f"queued_log_{len(self._log_queue)}"  # Return a placeholder ID
     
     def _process_log(self, logtype, content, timestamp):
-        """Actually create a log entry using S3 if enabled, otherwise fallback to MongoDB"""
-        if s3_enabled and s3_client:
-            # Use S3 implementation
-            log_id = create_codelog_s3(self._runId, self._codeId, logtype, content)
-            if log_id:
-                return log_id
-            # If S3 fails, fallback to MongoDB
-        
-        # MongoDB implementation (original behavior or fallback)
-        try:
-            log = {
-                "run_id": ObjectId(self._runId), 
-                "code_id": ObjectId(self._codeId), 
-                "type": logtype, 
-                "content": content[:8000],  # Match the 8000 char limit
-                "created_at": timestamp, 
-                "updated_at": timestamp
-            }
-            result = self._db["codelog"].insert_one(log)
-            print(f"Log saved to MongoDB: {result.inserted_id}")
-            return str(result.inserted_id)
-        except Exception as e:
-            print(f"Failed to save log to MongoDB: {e}")
+        """Create a log entry using S3"""
+        if not s3_enabled or not s3_client:
+            print("Warning: S3 is not enabled or configured, logs will not be saved")
             return None
+            
+        # Use S3 implementation
+        log_id = create_codelog_s3(self._runId, self._codeId, logtype, content)
+        if log_id:
+            return log_id
+        
+        print(f"Failed to save log to S3")
+        return None
     
     def flush_logs(self):
         """Process all queued logs"""
@@ -295,8 +326,8 @@ def main():
 
     header = Header(header_dict)
     params = Params(params_dict)
-    result = Result(db=db, runId=run_id)
-    log = Log(db=db, runId=run_id, codeId=code_id)
+    result = Result(runId=run_id, pg_conn=pg_conn)
+    log = Log(runId=run_id, codeId=code_id)
     request = Request(params=params, body=body, header=header)
 
     engine = Engine(
@@ -318,7 +349,10 @@ def main():
     print("Flushing logs...")
     log.flush_logs()
     
-    client.close()
+    # Close connections
+    if pg_conn:
+        pg_conn.close()
+        print("PostgreSQL connection closed")
 
 if __name__ == "__main__":
     main()

@@ -153,6 +153,10 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 			cmd = exec.Command("python", tempDir+"/main.py", idRunArg, idCodeArg, headerArg)
 		}
 	}
+	
+	// Pass environment variables to Python process
+	cmd.Env = os.Environ()
+	
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout

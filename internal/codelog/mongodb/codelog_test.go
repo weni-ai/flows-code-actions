@@ -24,15 +24,15 @@ func TestDeleteOlder(t *testing.T) {
 	defer cancel()
 
 	_, err = repo.Create(ctx, &codelog.CodeLog{
-		CodeID:    primitive.NewObjectID(),
-		RunID:     primitive.NewObjectID(),
+		CodeID:    primitive.NewObjectID().Hex(),
+		RunID:     primitive.NewObjectID().Hex(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	})
 	assert.NoError(t, err)
 	_, err = repo.Create(ctx, &codelog.CodeLog{
-		CodeID:    primitive.NewObjectID(),
-		RunID:     primitive.NewObjectID(),
+		CodeID:    primitive.NewObjectID().Hex(),
+		RunID:     primitive.NewObjectID().Hex(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	})

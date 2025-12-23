@@ -50,9 +50,9 @@ func (r *mockRepo) generateSearchPrefix(runID, codeID string, date *time.Time) s
 // Test helpers
 
 func createTestCodeLog() *codelog.CodeLog {
-	runID := primitive.NewObjectID()
-	codeID := primitive.NewObjectID()
-	logID := primitive.NewObjectID()
+	runID := primitive.NewObjectID().Hex()
+	codeID := primitive.NewObjectID().Hex()
+	logID := primitive.NewObjectID().Hex()
 
 	return &codelog.CodeLog{
 		ID:        logID,
@@ -141,9 +141,9 @@ func TestCodeLogStructure(t *testing.T) {
 	log := createTestCodeLog()
 
 	assert.NotNil(t, log)
-	assert.False(t, log.ID.IsZero())
-	assert.False(t, log.RunID.IsZero())
-	assert.False(t, log.CodeID.IsZero())
+	assert.NotEmpty(t, log.ID)
+	assert.NotEmpty(t, log.RunID)
+	assert.NotEmpty(t, log.CodeID)
 	assert.Equal(t, codelog.TypeInfo, log.Type)
 	assert.Equal(t, "Test log content", log.Content)
 	assert.False(t, log.CreatedAt.IsZero())
@@ -237,10 +237,10 @@ func TestIntegrationWithLocalStack(t *testing.T) {
 		created, err := repo.Create(ctx, log)
 		assert.NoError(t, err)
 		assert.NotNil(t, created)
-		assert.False(t, created.ID.IsZero())
+		assert.NotEmpty(t, created.ID)
 
 		// Test Get
-		retrieved, err := repo.GetByID(ctx, created.ID.Hex())
+		retrieved, err := repo.GetByID(ctx, created.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, created.ID, retrieved.ID)
 		assert.Equal(t, created.Content, retrieved.Content)
@@ -261,7 +261,7 @@ func TestIntegrationWithLocalStack(t *testing.T) {
 		assert.NoError(t, err)
 
 		// List logs by run and code ID
-		logs, err := repo.ListRunLogs(ctx, log1.RunID.Hex(), log1.CodeID.Hex(), 10, 1)
+		logs, err := repo.ListRunLogs(ctx, log1.RunID, log1.CodeID, 10, 1)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(logs), 2, "Should find at least 2 logs")
 
@@ -286,7 +286,7 @@ func TestIntegrationWithLocalStack(t *testing.T) {
 		assert.NoError(t, err)
 
 		// List logs by code ID only (run ID empty)
-		logs, err := repo.ListRunLogs(ctx, "", log.CodeID.Hex(), 10, 1)
+		logs, err := repo.ListRunLogs(ctx, "", log.CodeID, 10, 1)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(logs), 1, "Should find at least 1 log")
 
@@ -308,7 +308,7 @@ func TestIntegrationWithLocalStack(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Count logs by run and code ID
-		count, err := repo.Count(ctx, log.RunID.Hex(), log.CodeID.Hex())
+		count, err := repo.Count(ctx, log.RunID, log.CodeID)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, count, int64(1), "Should count at least 1 log")
 	})
