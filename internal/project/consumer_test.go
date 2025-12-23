@@ -157,7 +157,7 @@ func NewMemProjectRepository() *inMemoryRepo {
 func (r *inMemoryRepo) Create(ctx context.Context, p *Project) (*Project, error) {
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = time.Now()
-	p.ID = primitive.NewObjectID()
+	p.ID = primitive.NewObjectID().Hex()
 	r.projects[p.UUID] = p
 	return p, nil
 }

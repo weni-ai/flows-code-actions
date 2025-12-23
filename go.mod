@@ -1,8 +1,6 @@
 module github.com/weni-ai/flows-code-actions
 
-go 1.24.0
-
-toolchain go1.24.11
+go 1.24.11
 
 require (
 	github.com/bsm/redislock v0.9.4

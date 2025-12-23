@@ -24,7 +24,7 @@ func NewCodeRunRepository(db *sql.DB) coderun.Repository {
 func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun.CodeRun, error) {
 	query := `
 		INSERT INTO coderuns (mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id`
 
 	cr.CreatedAt = time.Now()
@@ -49,7 +49,7 @@ func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun
 	var id string
 	err = r.db.QueryRowContext(ctx, query,
 		nullString(cr.MongoObjectID),
-		nullString(cr.CodeID),
+		cr.CodeID, // Pass as string, let SQL handle the cast
 		nullString(cr.CodeMongoID),
 		cr.Status,
 		cr.Result,
@@ -74,7 +74,7 @@ func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun,
 	query := `
 		SELECT id, mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at
 		FROM coderuns
-		WHERE id = $1 OR mongo_object_id = $1`
+		WHERE id::text = $1 OR mongo_object_id = $1`
 
 	cr := &coderun.CodeRun{}
 	var mongoObjectID, codeID, codeMongoID sql.NullString
@@ -130,10 +130,11 @@ func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun,
 
 func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter map[string]interface{}) ([]coderun.CodeRun, error) {
 	// Search by code_id (UUID) or code_mongo_id (MongoDB ObjectID)
+	// Use explicit casting for UUID comparison
 	query := `
 		SELECT id, mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at
 		FROM coderuns
-		WHERE code_id = $1 OR code_mongo_id = $1`
+		WHERE (code_id::text = $1 OR code_mongo_id = $1)`
 
 	args := []interface{}{codeID}
 	argIndex := 2
@@ -223,9 +224,9 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter ma
 func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun) (*coderun.CodeRun, error) {
 	query := `
 		UPDATE coderuns
-		SET mongo_object_id = $2, code_id = $3, code_mongo_id = $4, status = $5, result = $6, 
+		SET mongo_object_id = $2, code_id = NULLIF($3, '')::uuid, code_mongo_id = $4, status = $5, result = $6, 
 		    extra = $7, params = $8, body = $9, headers = $10, updated_at = $11
-		WHERE id = $1 OR mongo_object_id = $1
+		WHERE id::text = $1 OR mongo_object_id = $1
 		RETURNING id`
 
 	cr.UpdatedAt = time.Now()
@@ -250,7 +251,7 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 	err = r.db.QueryRowContext(ctx, query,
 		id,
 		nullString(cr.MongoObjectID),
-		nullString(cr.CodeID),
+		cr.CodeID, // Pass as string, let SQL handle the cast
 		nullString(cr.CodeMongoID),
 		cr.Status,
 		cr.Result,
@@ -273,7 +274,7 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 }
 
 func (r *codeRunRepo) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM coderuns WHERE id = $1 OR mongo_object_id = $1`
+	query := `DELETE FROM coderuns WHERE id::text = $1 OR mongo_object_id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {

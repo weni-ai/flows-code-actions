@@ -287,6 +287,37 @@ if [ ! -z "$LOG_ID" ]; then
         echo "Response: $LOG_DETAIL_BODY"
     fi
 fi
+
+# Se temos um RUN_ID, consultar logs por run_id
+if [ ! -z "$RUN_ID" ]; then
+    echo ""
+    echo "🔍 Consultando logs por run_id: $RUN_ID"
+    LOGS_BY_RUN_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+      -X GET "${HOST}/codelog?run_id=${RUN_ID}" \
+      -H "Authorization: ${AUTH_TOKEN}")
+    
+    HTTP_STATUS=$(echo "$LOGS_BY_RUN_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+    LOGS_BY_RUN_BODY=$(echo "$LOGS_BY_RUN_RESPONSE" | sed '/HTTP_STATUS:/d')
+    
+    if [ "$HTTP_STATUS" = "200" ]; then
+        echo "✅ Logs por run_id consultados com sucesso!"
+        echo "Response: $LOGS_BY_RUN_BODY"
+        
+        # Contar quantos logs foram retornados
+        LOGS_COUNT=$(echo "$LOGS_BY_RUN_BODY" | jq -r '.data | length // 0')
+        echo "📊 Total de logs encontrados para esta run: $LOGS_COUNT"
+        
+        # Mostrar um resumo dos logs (primeiros 3)
+        if [ "$LOGS_COUNT" -gt "0" ]; then
+            echo ""
+            echo "📝 Resumo dos logs (primeiros 3):"
+            echo "$LOGS_BY_RUN_BODY" | jq -r '.data[:3] | .[] | "  - ID: \(.id) | Level: \(.level // "N/A") | Message: \(.message // "N/A")"' 2>/dev/null || echo "  (Não foi possível extrair resumo)"
+        fi
+    else
+        echo "❌ Erro ao consultar logs por run_id. HTTP Status: $HTTP_STATUS"
+        echo "Response: $LOGS_BY_RUN_BODY"
+    fi
+fi
 fi
 
 echo ""
@@ -356,8 +387,13 @@ echo "curl -X GET \"${HOST}/coderun?code_id=\${CODE_ID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\""
 echo ""
 
-echo "# Listar logs de um código específico:"
+echo "# Listar logs de um código específico (por code_id):"
 echo "curl -X GET \"${HOST}/codelog?code_id=\${CODE_ID}\" \\"
+echo "  -H \"Authorization: ${AUTH_TOKEN}\""
+echo ""
+
+echo "# Listar logs de uma execução específica (por run_id):"
+echo "curl -X GET \"${HOST}/codelog?run_id=\${RUN_ID}\" \\"
 echo "  -H \"Authorization: ${AUTH_TOKEN}\""
 echo ""
 
@@ -420,7 +456,7 @@ echo ""
 echo "📋 PARÂMETROS DOS ENDPOINTS DE CONSULTA:"
 echo "• /code - usa project_uuid (listar códigos do projeto)"
 echo "• /coderun - usa code_id (listar execuções de um código)"
-echo "• /codelog - usa code_id OU run_id (listar logs)"
+echo "• /codelog - usa code_id OU run_id (listar logs de um código ou de uma run específica)"
 echo ""
 echo "📝 SOBRE LOGS E EXECUÇÕES:"
 echo "• /action/endpoint/ - Execução direta, logs só na resposta HTTP"

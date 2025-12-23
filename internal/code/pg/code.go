@@ -56,7 +56,7 @@ func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 	query := `
 		SELECT id, mongo_object_id, name, type, source, language, url, project_uuid, timeout, created_at, updated_at 
 		FROM codes 
-		WHERE id = $1 OR mongo_object_id = $1`
+		WHERE id::text = $1 OR mongo_object_id = $1`
 
 	codeAction := &code.Code{}
 	var mongoObjectID sql.NullString
@@ -174,7 +174,7 @@ func (r *codeRepo) Update(ctx context.Context, id string, codeAction *code.Code)
 		UPDATE codes 
 		SET name = $2, type = $3, source = $4, language = $5, url = $6, 
 		    project_uuid = $7, timeout = $8, updated_at = $9, mongo_object_id = $10
-		WHERE id = $1 OR mongo_object_id = $1
+		WHERE id::text = $1 OR mongo_object_id = $1
 		RETURNING id`
 
 	codeAction.UpdatedAt = time.Now()
@@ -205,7 +205,7 @@ func (r *codeRepo) Update(ctx context.Context, id string, codeAction *code.Code)
 }
 
 func (r *codeRepo) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM codes WHERE id = $1 OR mongo_object_id = $1`
+	query := `DELETE FROM codes WHERE id::text = $1 OR mongo_object_id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
