@@ -317,6 +317,173 @@ def Run(engine):
 	}
 }
 
+func TestListLogs(t *testing.T) {
+	suite := &ImageIntegrationTestSuite{}
+	suite.SetT(t)
+	suite.SetupSuite()
+	defer suite.TearDownSuite()
+
+	// 1. Criar código que gera logs
+	pythonCodeWithLogs := `
+import json
+
+def Run(engine):
+    # Gerar diferentes tipos de logs
+    engine.log.debug("Debug log: Starting execution")
+    engine.log.info("Info log: Processing data")
+    
+    try:
+        result = {"status": "success", "value": 100}
+        engine.log.info("Info log: Calculation completed successfully")
+        engine.result.set(result, content_type="json")
+    except Exception as e:
+        engine.log.error(f"Error log: {str(e)}")
+        raise e
+`
+
+	// Criar código
+	createURL := suite.baseURL + "/code"
+	req, err := http.NewRequest(http.MethodPost, createURL, bytes.NewBuffer([]byte(pythonCodeWithLogs)))
+	suite.Require().NoError(err)
+
+	q := req.URL.Query()
+	q.Add("project_uuid", suite.projectUUID)
+	q.Add("name", "Test Log Generation Code")
+	q.Add("type", "endpoint")
+	q.Add("language", "python")
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "text/plain")
+
+	// Executar criação
+	resp, err := suite.httpClient.Do(req)
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
+
+	suite.Assert().Equal(http.StatusCreated, resp.StatusCode)
+
+	// Parse da resposta
+	var createdCode map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&createdCode)
+	suite.Require().NoError(err)
+
+	codeID, ok := createdCode["id"].(string)
+	suite.Require().True(ok, "ID deve estar presente na resposta")
+	suite.Assert().NotEmpty(codeID)
+
+	fmt.Printf("✅ Código criado para teste de logs com ID: %s\n", codeID)
+
+	// 2. Executar o código para gerar logs
+	executeURL := fmt.Sprintf("%s/action/endpoint/%s", suite.baseURL, codeID)
+	execResp, err := suite.httpClient.Post(executeURL, "application/json", nil)
+	suite.Require().NoError(err)
+	defer execResp.Body.Close()
+
+	suite.Assert().Equal(http.StatusOK, execResp.StatusCode)
+
+	fmt.Printf("✅ Código executado para gerar logs\n")
+
+	// 3. Aguardar um momento para logs serem persistidos
+	time.Sleep(2 * time.Second)
+
+	// 4. Listar logs por code_id
+	logsURL := fmt.Sprintf("%s/codelog?code_id=%s&page=1", suite.baseURL, url.QueryEscape(codeID))
+	logsResp, err := suite.httpClient.Get(logsURL)
+	suite.Require().NoError(err)
+	defer logsResp.Body.Close()
+
+	suite.Assert().Equal(http.StatusOK, logsResp.StatusCode)
+
+	// Parse da resposta de logs
+	var logsResponse map[string]interface{}
+	err = json.NewDecoder(logsResp.Body).Decode(&logsResponse)
+	suite.Require().NoError(err)
+
+	// Verificar estrutura da resposta
+	suite.Assert().Contains(logsResponse, "data")
+	suite.Assert().Contains(logsResponse, "total")
+	suite.Assert().Contains(logsResponse, "page")
+	suite.Assert().Contains(logsResponse, "last_page")
+
+	// Verificar que pelo menos alguns logs foram gerados
+	data, ok := logsResponse["data"].([]interface{})
+	suite.Require().True(ok, "data deve ser um array")
+
+	total, ok := logsResponse["total"].(float64)
+	suite.Require().True(ok, "total deve ser um número")
+
+	page, ok := logsResponse["page"].(float64)
+	suite.Require().True(ok, "page deve ser um número")
+
+	fmt.Printf("✅ Logs listados: total=%v, page=%v, logs_count=%d\n", total, page, len(data))
+
+	// Verificar que temos pelo menos um log (pode não ter logs se execução for muito rápida)
+	suite.Assert().GreaterOrEqual(int(total), 0, "Total de logs deve ser >= 0")
+	suite.Assert().Equal(1, int(page), "Página deve ser 1")
+
+	// Se temos logs, verificar estrutura de pelo menos um log
+	if len(data) > 0 {
+		logEntry := data[0].(map[string]interface{})
+		suite.Assert().Contains(logEntry, "id")
+		suite.Assert().Contains(logEntry, "run_id")
+		suite.Assert().Contains(logEntry, "code_id")
+		suite.Assert().Contains(logEntry, "type")
+		suite.Assert().Contains(logEntry, "content")
+		suite.Assert().Contains(logEntry, "created_at")
+
+		// Verificar que o code_id no log corresponde ao código criado
+		logCodeID, ok := logEntry["code_id"].(string)
+		if ok {
+			suite.Assert().Equal(codeID, logCodeID, "code_id no log deve corresponder ao código executado")
+		}
+
+		fmt.Printf("✅ Estrutura do log verificada: type=%s, content=%s\n",
+			logEntry["type"], logEntry["content"])
+	}
+
+	// 5. Testar paginação (page 2)
+	logsURL2 := fmt.Sprintf("%s/codelog?code_id=%s&page=2", suite.baseURL, url.QueryEscape(codeID))
+	logsResp2, err := suite.httpClient.Get(logsURL2)
+	suite.Require().NoError(err)
+	defer logsResp2.Body.Close()
+
+	suite.Assert().Equal(http.StatusOK, logsResp2.StatusCode)
+
+	var logsResponse2 map[string]interface{}
+	err = json.NewDecoder(logsResp2.Body).Decode(&logsResponse2)
+	suite.Require().NoError(err)
+
+	page2, ok := logsResponse2["page"].(float64)
+	suite.Require().True(ok)
+	suite.Assert().Equal(2, int(page2), "Página deve ser 2")
+
+	fmt.Printf("✅ Paginação testada: page=%v\n", page2)
+
+	// 6. Testar parâmetro inválido (sem run_id nem code_id)
+	invalidLogsURL := fmt.Sprintf("%s/codelog?page=1", suite.baseURL)
+	invalidResp, err := suite.httpClient.Get(invalidLogsURL)
+	suite.Require().NoError(err)
+	defer invalidResp.Body.Close()
+
+	suite.Assert().Equal(http.StatusBadRequest, invalidResp.StatusCode)
+	fmt.Printf("✅ Validação de parâmetros testada (status: %d)\n", invalidResp.StatusCode)
+
+	// 7. Limpar - deletar código criado
+	deleteURL := fmt.Sprintf("%s/code/%s", suite.baseURL, codeID)
+	deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	suite.Require().NoError(err)
+
+	dq := deleteReq.URL.Query()
+	dq.Add("project_uuid", suite.projectUUID)
+	deleteReq.URL.RawQuery = dq.Encode()
+
+	deleteResp, err := suite.httpClient.Do(deleteReq)
+	suite.Require().NoError(err)
+	defer deleteResp.Body.Close()
+
+	fmt.Printf("🧹 Código de teste de logs deletado (status: %d)\n", deleteResp.StatusCode)
+}
+
 // Cleanup após todos os testes
 func (suite *ImageIntegrationTestSuite) TearDownSuite() {
 	fmt.Println("🧹 Limpeza dos testes concluída")

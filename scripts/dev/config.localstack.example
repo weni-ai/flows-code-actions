@@ -1,0 +1,21 @@
+# LocalStack S3 Configuration for Development
+# Copy these environment variables to your shell or .env file
+
+# Enable S3 storage
+export FLOWS_CODE_ACTIONS_S3_ENABLED=true
+
+# LocalStack S3 settings
+export FLOWS_CODE_ACTIONS_S3_ENDPOINT=http://localhost:4566
+export FLOWS_CODE_ACTIONS_S3_REGION=us-east-1
+export FLOWS_CODE_ACTIONS_S3_BUCKET_NAME=codeactions-dev
+export FLOWS_CODE_ACTIONS_S3_PREFIX=codeactions
+
+# LocalStack credentials (can be anything for LocalStack)
+export FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID=test
+export FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY=test
+
+# Other configurations you might need...
+# export FLOWS_CODE_ACTIONS_ENVIRONMENT=local
+# export FLOWS_CODE_ACTIONS_LOG_LEVEL=debug
+# export FLOWS_CODE_ACTIONS_DB_URI=mongodb://localhost:27017/codeactions
+

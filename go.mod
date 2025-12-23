@@ -3,6 +3,7 @@ module github.com/weni-ai/flows-code-actions
 go 1.24.11
 
 require (
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/bsm/redislock v0.9.4
 	github.com/containerd/cgroups/v3 v3.0.3
 	github.com/golang-module/carbon/v2 v2.3.12
@@ -25,8 +26,9 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
@@ -35,6 +37,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect

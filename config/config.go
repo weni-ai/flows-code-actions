@@ -22,6 +22,7 @@ type Config struct {
 	Cleaner            CleanerConfig
 	Blacklist          string
 	Skiplist           string
+	S3                 S3Config
 
 	HealthCheckCacheTime int64
 }
@@ -88,6 +89,16 @@ type EDAConfig struct {
 	PermissionQueueName    string
 }
 
+type S3Config struct {
+	Region          string
+	BucketName      string
+	AccessKeyID     string
+	SecretAccessKey string
+	Prefix          string
+	Enabled         bool
+	Endpoint        string // Custom endpoint for LocalStack or other S3-compatible services
+}
+
 func NewConfig() *Config {
 	return &Config{
 		HTTP:            LoadHTTPConfig(),
@@ -103,6 +114,7 @@ func NewConfig() *Config {
 		Cleaner:         NewCleanerConfig(),
 		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 		Skiplist:        Getenv("FLOWS_CODE_ACTIONS_SKIPLIST", ""),
+		S3:              LoadS3Config(),
 
 		HealthCheckCacheTime: GetenvInt64("FLOWS_CODE_ACTIONS_HEALTH_CHECK_CACHE_TIME", 3),
 	}
@@ -314,6 +326,23 @@ func LoadEDAConfig() EDAConfig {
 		ProjectQueueName:       projectQueueName,
 		PermissionExchangeName: permissionExchangeName,
 		PermissionQueueName:    permissionQueueName,
+	}
+}
+
+func LoadS3Config() S3Config {
+	enabled, err := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_S3_ENABLED", "false"))
+	if err != nil {
+		enabled = false
+	}
+
+	return S3Config{
+		Region:          Getenv("FLOWS_CODE_ACTIONS_S3_REGION", "us-east-1"),
+		BucketName:      Getenv("FLOWS_CODE_ACTIONS_S3_BUCKET_NAME", ""),
+		AccessKeyID:     Getenv("FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID", ""),
+		SecretAccessKey: Getenv("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY", ""),
+		Prefix:          Getenv("FLOWS_CODE_ACTIONS_S3_PREFIX", "codeactions"),
+		Enabled:         enabled,
+		Endpoint:        Getenv("FLOWS_CODE_ACTIONS_S3_ENDPOINT", ""), // For LocalStack: http://localhost:4566
 	}
 }
 
