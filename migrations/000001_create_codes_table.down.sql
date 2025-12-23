@@ -6,6 +6,7 @@ DROP INDEX IF EXISTS idx_codes_created_at;
 DROP INDEX IF EXISTS idx_codes_project_type;
 DROP INDEX IF EXISTS idx_codes_type;
 DROP INDEX IF EXISTS idx_codes_project_uuid;
+DROP INDEX IF EXISTS idx_codes_mongo_object_id;
 
 -- Drop table
 DROP TABLE IF EXISTS codes;

@@ -43,7 +43,7 @@ type CodeActionResponse struct {
 
 func ParseCodeToResponse(newCode *code.Code) CodeActionResponse {
 	return CodeActionResponse{
-		ID: newCode.ID.Hex(),
+		ID: newCode.ID,
 
 		Name:        newCode.Name,
 		Source:      newCode.Source,
@@ -124,7 +124,7 @@ func (h *CodeHandler) CreateCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	metrics.AddCodeCreatedCount(ca.ProjectUUID, newCode.ID.Hex(), 1)
+	metrics.AddCodeCreatedCount(ca.ProjectUUID, newCode.ID, 1)
 
 	return c.JSON(http.StatusCreated, newCode)
 }

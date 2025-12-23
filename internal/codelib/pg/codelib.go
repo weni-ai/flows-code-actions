@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/codelib"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	_ "github.com/lib/pq"
 )
@@ -23,8 +22,8 @@ func NewCodeLibRepo(db *sql.DB) codelib.Repository {
 
 func (r *codelibRepo) Create(ctx context.Context, cl *codelib.CodeLib) (*codelib.CodeLib, error) {
 	query := `
-		INSERT INTO codelibs (name, language, created_at, updated_at) 
-		VALUES ($1, $2, $3, $4) 
+		INSERT INTO codelibs (mongo_object_id, name, language, created_at, updated_at) 
+		VALUES ($1, $2, $3, $4, $5) 
 		RETURNING id`
 
 	cl.CreatedAt = time.Now()
@@ -32,6 +31,7 @@ func (r *codelibRepo) Create(ctx context.Context, cl *codelib.CodeLib) (*codelib
 
 	var id string
 	err := r.db.QueryRowContext(ctx, query,
+		nullString(cl.MongoObjectID),
 		cl.Name,
 		cl.Language,
 		cl.CreatedAt,
@@ -42,14 +42,7 @@ func (r *codelibRepo) Create(ctx context.Context, cl *codelib.CodeLib) (*codelib
 		return nil, errors.Wrap(err, "error creating codelib")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(id); err == nil {
-		cl.ID = oid
-	} else {
-		// If can't convert, create a new ObjectID
-		cl.ID = primitive.NewObjectID()
-	}
-
+	cl.ID = id
 	return cl, nil
 }
 
@@ -67,8 +60,8 @@ func (r *codelibRepo) CreateBulk(ctx context.Context, cls []*codelib.CodeLib) ([
 
 	// Prepare statement for bulk insert
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO codelibs (name, language, created_at, updated_at) 
-		VALUES ($1, $2, $3, $4) 
+		INSERT INTO codelibs (mongo_object_id, name, language, created_at, updated_at) 
+		VALUES ($1, $2, $3, $4, $5) 
 		RETURNING id`)
 	if err != nil {
 		return nil, errors.Wrap(err, "error preparing bulk insert statement")
@@ -82,6 +75,7 @@ func (r *codelibRepo) CreateBulk(ctx context.Context, cls []*codelib.CodeLib) ([
 
 		var id string
 		err := stmt.QueryRowContext(ctx,
+			nullString(cl.MongoObjectID),
 			cl.Name,
 			cl.Language,
 			cl.CreatedAt,
@@ -92,13 +86,7 @@ func (r *codelibRepo) CreateBulk(ctx context.Context, cls []*codelib.CodeLib) ([
 			return nil, errors.Wrap(err, "error executing bulk insert")
 		}
 
-		// Convert string UUID to ObjectID for compatibility
-		if oid, err := primitive.ObjectIDFromHex(id); err == nil {
-			cl.ID = oid
-		} else {
-			// If can't convert, create a new ObjectID
-			cl.ID = primitive.NewObjectID()
-		}
+		cl.ID = id
 	}
 
 	// Commit transaction
@@ -111,7 +99,7 @@ func (r *codelibRepo) CreateBulk(ctx context.Context, cls []*codelib.CodeLib) ([
 
 func (r *codelibRepo) List(ctx context.Context, lang *codelib.LanguageType) ([]codelib.CodeLib, error) {
 	query := `
-		SELECT id, name, language, created_at, updated_at 
+		SELECT id, mongo_object_id, name, language, created_at, updated_at 
 		FROM codelibs`
 
 	args := []interface{}{}
@@ -133,9 +121,11 @@ func (r *codelibRepo) List(ctx context.Context, lang *codelib.LanguageType) ([]c
 	var libs []codelib.CodeLib
 	for rows.Next() {
 		var cl codelib.CodeLib
-		var dbID string
+		var mongoObjectID sql.NullString
+		
 		err := rows.Scan(
-			&dbID,
+			&cl.ID,
+			&mongoObjectID,
 			&cl.Name,
 			&cl.Language,
 			&cl.CreatedAt,
@@ -145,12 +135,8 @@ func (r *codelibRepo) List(ctx context.Context, lang *codelib.LanguageType) ([]c
 			return nil, errors.Wrap(err, "error scanning codelib row")
 		}
 
-		// Convert string UUID to ObjectID for compatibility
-		if oid, err := primitive.ObjectIDFromHex(dbID); err == nil {
-			cl.ID = oid
-		} else {
-			// If can't convert, create a new ObjectID
-			cl.ID = primitive.NewObjectID()
+		if mongoObjectID.Valid {
+			cl.MongoObjectID = mongoObjectID.String
 		}
 
 		libs = append(libs, cl)
@@ -165,7 +151,7 @@ func (r *codelibRepo) List(ctx context.Context, lang *codelib.LanguageType) ([]c
 
 func (r *codelibRepo) Find(ctx context.Context, name string, lang *codelib.LanguageType) (*codelib.CodeLib, error) {
 	query := `
-		SELECT id, name, language, created_at, updated_at 
+		SELECT id, mongo_object_id, name, language, created_at, updated_at 
 		FROM codelibs 
 		WHERE name = $1`
 
@@ -178,9 +164,11 @@ func (r *codelibRepo) Find(ctx context.Context, name string, lang *codelib.Langu
 	}
 
 	cl := &codelib.CodeLib{}
-	var dbID string
+	var mongoObjectID sql.NullString
+	
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
-		&dbID,
+		&cl.ID,
+		&mongoObjectID,
 		&cl.Name,
 		&cl.Language,
 		&cl.CreatedAt,
@@ -194,13 +182,17 @@ func (r *codelibRepo) Find(ctx context.Context, name string, lang *codelib.Langu
 		return nil, errors.Wrap(err, "error finding codelib")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(dbID); err == nil {
-		cl.ID = oid
-	} else {
-		// If can't convert, create a new ObjectID
-		cl.ID = primitive.NewObjectID()
+	if mongoObjectID.Valid {
+		cl.MongoObjectID = mongoObjectID.String
 	}
 
 	return cl, nil
+}
+
+// nullString converts an empty string to sql.NullString
+func nullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
 }

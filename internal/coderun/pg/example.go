@@ -52,11 +52,11 @@ func Example() error {
 		return fmt.Errorf("failed to create coderun: %w", err)
 	}
 
-	log.Printf("Created coderun with ID: %s, Status: %s\n", createdRun.ID.Hex(), createdRun.Status)
+	log.Printf("Created coderun with ID: %s, Status: %s\n", createdRun.ID, createdRun.Status)
 
 	// Update coderun to started
 	createdRun.Status = coderun.StatusStarted
-	updatedRun, err := coderunRepo.Update(ctx, createdRun.ID.Hex(), createdRun)
+	updatedRun, err := coderunRepo.Update(ctx, createdRun.ID, createdRun)
 	if err != nil {
 		return fmt.Errorf("failed to update coderun: %w", err)
 	}
@@ -71,7 +71,7 @@ func Example() error {
 		"content_type": "application/json",
 	}
 
-	finalRun, err := coderunRepo.Update(ctx, updatedRun.ID.Hex(), updatedRun)
+	finalRun, err := coderunRepo.Update(ctx, updatedRun.ID, updatedRun)
 	if err != nil {
 		return fmt.Errorf("failed to complete coderun: %w", err)
 	}
@@ -79,16 +79,16 @@ func Example() error {
 	log.Printf("Completed coderun with result: %s\n", finalRun.Result)
 
 	// Get coderun by ID
-	retrievedRun, err := coderunRepo.GetByID(ctx, finalRun.ID.Hex())
+	retrievedRun, err := coderunRepo.GetByID(ctx, finalRun.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get coderun: %w", err)
 	}
 
-	log.Printf("Retrieved coderun: ID=%s, Status=%s\n", retrievedRun.ID.Hex(), retrievedRun.Status)
+	log.Printf("Retrieved coderun: ID=%s, Status=%s\n", retrievedRun.ID, retrievedRun.Status)
 
 	// List coderuns by code ID
 	filter := map[string]interface{}{}
-	coderuns, err := coderunRepo.ListByCodeID(ctx, newCodeRun.CodeID.Hex(), filter)
+	coderuns, err := coderunRepo.ListByCodeID(ctx, newCodeRun.CodeID, filter)
 	if err != nil {
 		return fmt.Errorf("failed to list coderuns: %w", err)
 	}
@@ -101,7 +101,7 @@ func Example() error {
 		"before": time.Now(),
 	}
 
-	recentRuns, err := coderunRepo.ListByCodeID(ctx, newCodeRun.CodeID.Hex(), filterWithDates)
+	recentRuns, err := coderunRepo.ListByCodeID(ctx, newCodeRun.CodeID, filterWithDates)
 	if err != nil {
 		return fmt.Errorf("failed to list recent coderuns: %w", err)
 	}
@@ -155,7 +155,7 @@ func ExampleUsageWithService() error {
 
 	// 2. Start execution
 	run.Status = coderun.StatusStarted
-	run, err = repo.Update(ctx, run.ID.Hex(), run)
+	run, err = repo.Update(ctx, run.ID, run)
 	if err != nil {
 		return fmt.Errorf("failed to start run: %w", err)
 	}
@@ -168,7 +168,7 @@ func ExampleUsageWithService() error {
 		"content_type": "application/json",
 	}
 
-	run, err = repo.Update(ctx, run.ID.Hex(), run)
+	run, err = repo.Update(ctx, run.ID, run)
 	if err != nil {
 		return fmt.Errorf("failed to complete run: %w", err)
 	}

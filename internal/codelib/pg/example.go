@@ -55,7 +55,7 @@ func Example() error {
 		return fmt.Errorf("failed to create codelib: %w", err)
 	}
 
-	log.Printf("Created codelib with ID: %s\n", createdCodeLib.ID.Hex())
+	log.Printf("Created codelib with ID: %s\n", createdCodeLib.ID)
 
 	// Create multiple codelibs in bulk
 	bulkCodeLibs := []*codelib.CodeLib{
@@ -80,7 +80,7 @@ func Example() error {
 
 	fmt.Printf("Found %d Python libraries:\n", len(allPythonLibs))
 	for _, lib := range allPythonLibs {
-		fmt.Printf("- %s (ID: %s)\n", lib.Name, lib.ID.Hex())
+		fmt.Printf("- %s (ID: %s)\n", lib.Name, lib.ID)
 	}
 
 	// Find a specific library

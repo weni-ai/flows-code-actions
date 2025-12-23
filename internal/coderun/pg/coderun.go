@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	_ "github.com/lib/pq"
 )
@@ -24,8 +23,8 @@ func NewCodeRunRepository(db *sql.DB) coderun.Repository {
 
 func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun.CodeRun, error) {
 	query := `
-		INSERT INTO coderuns (code_id, status, result, extra, params, body, headers, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO coderuns (mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id`
 
 	cr.CreatedAt = time.Now()
@@ -49,7 +48,9 @@ func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun
 
 	var id string
 	err = r.db.QueryRowContext(ctx, query,
-		cr.CodeID.Hex(),
+		nullString(cr.MongoObjectID),
+		nullString(cr.CodeID),
+		nullString(cr.CodeMongoID),
 		cr.Status,
 		cr.Result,
 		extraJSON,
@@ -64,29 +65,26 @@ func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun
 		return nil, errors.Wrap(err, "error creating coderun")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(id); err == nil {
-		cr.ID = oid
-	} else {
-		cr.ID = primitive.NewObjectID()
-	}
-
+	cr.ID = id
 	return cr, nil
 }
 
 func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun, error) {
+	// Try to find by UUID first, then by mongo_object_id
 	query := `
-		SELECT id, code_id, status, result, extra, params, body, headers, created_at, updated_at
+		SELECT id, mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at
 		FROM coderuns
-		WHERE id = $1`
+		WHERE id = $1 OR mongo_object_id = $1`
 
 	cr := &coderun.CodeRun{}
-	var dbID, codeID string
+	var mongoObjectID, codeID, codeMongoID sql.NullString
 	var extraJSON, paramsJSON, headersJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&dbID,
+		&cr.ID,
+		&mongoObjectID,
 		&codeID,
+		&codeMongoID,
 		&cr.Status,
 		&cr.Result,
 		&extraJSON,
@@ -104,17 +102,14 @@ func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun,
 		return nil, errors.Wrap(err, "error getting coderun by id")
 	}
 
-	// Convert UUIDs to ObjectIDs
-	if oid, err := primitive.ObjectIDFromHex(dbID); err == nil {
-		cr.ID = oid
-	} else {
-		cr.ID = primitive.NewObjectID()
+	if mongoObjectID.Valid {
+		cr.MongoObjectID = mongoObjectID.String
 	}
-
-	if oid, err := primitive.ObjectIDFromHex(codeID); err == nil {
-		cr.CodeID = oid
-	} else {
-		cr.CodeID = primitive.NewObjectID()
+	if codeID.Valid {
+		cr.CodeID = codeID.String
+	}
+	if codeMongoID.Valid {
+		cr.CodeMongoID = codeMongoID.String
 	}
 
 	// Unmarshal JSON fields
@@ -134,10 +129,11 @@ func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun,
 }
 
 func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter map[string]interface{}) ([]coderun.CodeRun, error) {
+	// Search by code_id (UUID) or code_mongo_id (MongoDB ObjectID)
 	query := `
-		SELECT id, code_id, status, result, extra, params, body, headers, created_at, updated_at
+		SELECT id, mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at
 		FROM coderuns
-		WHERE code_id = $1`
+		WHERE code_id = $1 OR code_mongo_id = $1`
 
 	args := []interface{}{codeID}
 	argIndex := 2
@@ -170,12 +166,14 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter ma
 	var coderuns []coderun.CodeRun
 	for rows.Next() {
 		cr := coderun.CodeRun{}
-		var dbID, dbCodeID string
+		var mongoObjectID, dbCodeID, codeMongoID sql.NullString
 		var extraJSON, paramsJSON, headersJSON []byte
 
 		err := rows.Scan(
-			&dbID,
+			&cr.ID,
+			&mongoObjectID,
 			&dbCodeID,
+			&codeMongoID,
 			&cr.Status,
 			&cr.Result,
 			&extraJSON,
@@ -189,17 +187,14 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter ma
 			return nil, errors.Wrap(err, "error scanning coderun row")
 		}
 
-		// Convert UUIDs to ObjectIDs
-		if oid, err := primitive.ObjectIDFromHex(dbID); err == nil {
-			cr.ID = oid
-		} else {
-			cr.ID = primitive.NewObjectID()
+		if mongoObjectID.Valid {
+			cr.MongoObjectID = mongoObjectID.String
 		}
-
-		if oid, err := primitive.ObjectIDFromHex(dbCodeID); err == nil {
-			cr.CodeID = oid
-		} else {
-			cr.CodeID = primitive.NewObjectID()
+		if dbCodeID.Valid {
+			cr.CodeID = dbCodeID.String
+		}
+		if codeMongoID.Valid {
+			cr.CodeMongoID = codeMongoID.String
 		}
 
 		// Unmarshal JSON fields
@@ -228,9 +223,10 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter ma
 func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun) (*coderun.CodeRun, error) {
 	query := `
 		UPDATE coderuns
-		SET code_id = $2, status = $3, result = $4, extra = $5, params = $6, 
-		    body = $7, headers = $8, updated_at = $9
-		WHERE id = $1`
+		SET mongo_object_id = $2, code_id = $3, code_mongo_id = $4, status = $5, result = $6, 
+		    extra = $7, params = $8, body = $9, headers = $10, updated_at = $11
+		WHERE id = $1 OR mongo_object_id = $1
+		RETURNING id`
 
 	cr.UpdatedAt = time.Now()
 
@@ -250,9 +246,12 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 		return nil, errors.Wrap(err, "error marshaling headers")
 	}
 
-	result, err := r.db.ExecContext(ctx, query,
+	var returnedID string
+	err = r.db.QueryRowContext(ctx, query,
 		id,
-		cr.CodeID.Hex(),
+		nullString(cr.MongoObjectID),
+		nullString(cr.CodeID),
+		nullString(cr.CodeMongoID),
 		cr.Status,
 		cr.Result,
 		extraJSON,
@@ -260,33 +259,21 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 		cr.Body,
 		headersJSON,
 		cr.UpdatedAt,
-	)
+	).Scan(&returnedID)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("coderun not found")
+		}
 		return nil, errors.Wrap(err, "error updating coderun")
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, errors.Wrap(err, "error checking affected rows")
-	}
-
-	if rowsAffected == 0 {
-		return nil, errors.New("coderun not found")
-	}
-
-	// Convert string UUID to ObjectID
-	if oid, err := primitive.ObjectIDFromHex(id); err == nil {
-		cr.ID = oid
-	} else {
-		cr.ID = primitive.NewObjectID()
-	}
-
+	cr.ID = returnedID
 	return cr, nil
 }
 
 func (r *codeRunRepo) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM coderuns WHERE id = $1`
+	query := `DELETE FROM coderuns WHERE id = $1 OR mongo_object_id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -303,6 +290,14 @@ func (r *codeRunRepo) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+// nullString converts an empty string to sql.NullString
+func nullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
 }
 
 func (r *codeRunRepo) DeleteOlder(ctx context.Context, date time.Time, limit int64) (int64, error) {

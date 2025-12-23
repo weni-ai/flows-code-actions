@@ -59,10 +59,10 @@ func Example() error {
 		return fmt.Errorf("failed to create code: %w", err)
 	}
 
-	fmt.Printf("Created code with ID: %s\n", createdCode.ID.Hex())
+	fmt.Printf("Created code with ID: %s\n", createdCode.ID)
 
 	// Get code by ID
-	retrievedCode, err := codeRepository.GetByID(ctx, createdCode.ID.Hex())
+	retrievedCode, err := codeRepository.GetByID(ctx, createdCode.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get code: %w", err)
 	}

@@ -7,6 +7,7 @@ DROP INDEX IF EXISTS idx_codelibs_created_at;
 DROP INDEX IF EXISTS idx_codelibs_name_language;
 DROP INDEX IF EXISTS idx_codelibs_language;
 DROP INDEX IF EXISTS idx_codelibs_name;
+DROP INDEX IF EXISTS idx_codelibs_mongo_object_id;
 
 -- Drop table
 DROP TABLE IF EXISTS codelibs;

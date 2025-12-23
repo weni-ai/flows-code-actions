@@ -31,8 +31,11 @@ func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) 
 	if err != nil {
 		return nil, err
 	}
-	user.ID = result.InsertedID.(primitive.ObjectID)
-	return nil, nil
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		user.ID = oid.Hex()
+		user.MongoObjectID = oid.Hex()
+	}
+	return user, nil
 }
 
 func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {

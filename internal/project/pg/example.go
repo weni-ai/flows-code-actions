@@ -61,7 +61,7 @@ func Example() error {
 	}
 
 	log.Printf("Created project: %s (UUID: %s)\n", createdProject.Name, createdProject.UUID)
-	log.Printf("Project ID: %s\n", createdProject.ID.Hex())
+	log.Printf("Project ID: %s\n", createdProject.ID)
 	log.Printf("Authorizations: %+v\n", createdProject.Authorizations)
 
 	// Find project by UUID

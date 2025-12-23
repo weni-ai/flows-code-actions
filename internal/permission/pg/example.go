@@ -98,7 +98,7 @@ func Example() error {
 
 	// Update user role from Viewer to Contributor
 	viewerUser.Role = permission.ContributorRole
-	updatedUser, err := userRepo.Update(ctx, viewerUser.ID.Hex(), viewerUser)
+	updatedUser, err := userRepo.Update(ctx, viewerUser.ID, viewerUser)
 	if err != nil {
 		return fmt.Errorf("failed to update user role: %w", err)
 	}

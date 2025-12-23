@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/project"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	_ "github.com/lib/pq"
 )
@@ -30,8 +29,8 @@ func (r *repo) Create(ctx context.Context, proj *project.Project) (*project.Proj
 	}
 
 	query := `
-		INSERT INTO projects (uuid, name, authorizations, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO projects (mongo_object_id, uuid, name, authorizations, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`
 
 	proj.CreatedAt = time.Now()
@@ -45,6 +44,7 @@ func (r *repo) Create(ctx context.Context, proj *project.Project) (*project.Proj
 
 	var id string
 	err = r.db.QueryRowContext(ctx, query,
+		nullString(proj.MongoObjectID),
 		proj.UUID,
 		proj.Name,
 		authJSON,
@@ -56,28 +56,23 @@ func (r *repo) Create(ctx context.Context, proj *project.Project) (*project.Proj
 		return nil, errors.Wrap(err, "error creating project")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(id); err == nil {
-		proj.ID = oid
-	} else {
-		proj.ID = primitive.NewObjectID()
-	}
-
+	proj.ID = id
 	return proj, nil
 }
 
 func (r *repo) FindByUUID(ctx context.Context, uuid string) (*project.Project, error) {
 	query := `
-		SELECT id, uuid, name, authorizations, created_at, updated_at
+		SELECT id, mongo_object_id, uuid, name, authorizations, created_at, updated_at
 		FROM projects
 		WHERE uuid = $1`
 
 	proj := &project.Project{}
-	var dbID string
+	var mongoObjectID sql.NullString
 	var authJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, uuid).Scan(
-		&dbID,
+		&proj.ID,
+		&mongoObjectID,
 		&proj.UUID,
 		&proj.Name,
 		&authJSON,
@@ -92,11 +87,8 @@ func (r *repo) FindByUUID(ctx context.Context, uuid string) (*project.Project, e
 		return nil, errors.Wrap(err, "error finding project by uuid")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(dbID); err == nil {
-		proj.ID = oid
-	} else {
-		proj.ID = primitive.NewObjectID()
+	if mongoObjectID.Valid {
+		proj.MongoObjectID = mongoObjectID.String
 	}
 
 	// Unmarshal authorizations
@@ -114,30 +106,28 @@ func (r *repo) FindByUUID(ctx context.Context, uuid string) (*project.Project, e
 func (r *repo) Update(ctx context.Context, proj *project.Project) (*project.Project, error) {
 	query := `
 		UPDATE projects
-		SET name = $2, updated_at = $3
-		WHERE id = $1`
+		SET mongo_object_id = $2, name = $3, updated_at = $4
+		WHERE id = $1 OR mongo_object_id = $1 OR uuid = $1
+		RETURNING id`
 
 	proj.UpdatedAt = time.Now()
 
-	result, err := r.db.ExecContext(ctx, query,
-		proj.ID.Hex(),
+	var returnedID string
+	err := r.db.QueryRowContext(ctx, query,
+		proj.ID,
+		nullString(proj.MongoObjectID),
 		proj.Name,
 		proj.UpdatedAt,
-	)
+	).Scan(&returnedID)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("project not found")
+		}
 		return nil, errors.Wrap(err, "error updating project")
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, errors.Wrap(err, "error checking affected rows")
-	}
-
-	if rowsAffected == 0 {
-		return nil, errors.New("project not found")
-	}
-
+	proj.ID = returnedID
 	return proj, nil
 }
 
@@ -168,4 +158,12 @@ func (r *repo) UpdateAuthorizations(ctx context.Context, uuid string, authorizat
 	}
 
 	return nil
+}
+
+// nullString converts an empty string to sql.NullString
+func nullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
 }

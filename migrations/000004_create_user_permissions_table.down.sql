@@ -6,6 +6,7 @@ DROP INDEX IF EXISTS idx_user_permissions_unique_project_email;
 DROP INDEX IF EXISTS idx_user_permissions_project_email;
 DROP INDEX IF EXISTS idx_user_permissions_email;
 DROP INDEX IF EXISTS idx_user_permissions_project_uuid;
+DROP INDEX IF EXISTS idx_user_permissions_mongo_object_id;
 
 -- Drop table
 DROP TABLE IF EXISTS user_permissions;

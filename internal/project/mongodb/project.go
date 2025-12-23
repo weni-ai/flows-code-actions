@@ -31,7 +31,10 @@ func (r *repo) Create(ctx context.Context, project *project.Project) (*project.P
 	if err != nil {
 		return nil, err
 	}
-	project.ID = result.InsertedID.(primitive.ObjectID)
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		project.ID = oid.Hex()
+		project.MongoObjectID = oid.Hex()
+	}
 	return project, nil
 }
 

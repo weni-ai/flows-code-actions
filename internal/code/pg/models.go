@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/weni-ai/flows-code-actions/internal/code"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // CodePG represents the PostgreSQL version of the Code struct
@@ -35,12 +34,8 @@ func (c *CodePG) ToMongoCode() *code.Code {
 		Timeout:     c.Timeout,
 	}
 
-	// Convert string ID to ObjectID if valid
-	if c.ID != "" {
-		if oid, err := primitive.ObjectIDFromHex(c.ID); err == nil {
-			mongoCode.ID = oid
-		}
-	}
+	// Set the ID directly as string
+	mongoCode.ID = c.ID
 
 	return mongoCode
 }
@@ -48,7 +43,7 @@ func (c *CodePG) ToMongoCode() *code.Code {
 // FromMongoCode converts MongoDB Code to PostgreSQL Code format
 func FromMongoCode(mongoCode *code.Code) *CodePG {
 	return &CodePG{
-		ID:          mongoCode.ID.Hex(),
+		ID:          mongoCode.ID,
 		Name:        mongoCode.Name,
 		Type:        mongoCode.Type,
 		Source:      mongoCode.Source,

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CodeType string
@@ -21,7 +19,8 @@ const (
 )
 
 type Code struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	ID            string `json:"id,omitempty"`                                   // PostgreSQL UUID (primary key)
+	MongoObjectID string `json:"mongo_object_id,omitempty" bson:"_id,omitempty"` // MongoDB ObjectID for backward compatibility
 
 	Name        string       `bson:"name" json:"name"`
 	Type        CodeType     `bson:"type" json:"type"`

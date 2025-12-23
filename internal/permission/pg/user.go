@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	_ "github.com/lib/pq"
 )
@@ -29,8 +28,8 @@ func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) 
 	}
 
 	query := `
-		INSERT INTO user_permissions (project_uuid, email, role, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO user_permissions (mongo_object_id, project_uuid, email, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`
 
 	user.CreatedAt = time.Now()
@@ -38,6 +37,7 @@ func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) 
 
 	var id string
 	err := r.db.QueryRowContext(ctx, query,
+		nullString(user.MongoObjectID),
 		user.ProjectUUID,
 		user.Email,
 		user.Role,
@@ -49,19 +49,13 @@ func (r *userRepo) Create(ctx context.Context, user *permission.UserPermission) 
 		return nil, errors.Wrap(err, "error creating user permission")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(id); err == nil {
-		user.ID = oid
-	} else {
-		user.ID = primitive.NewObjectID()
-	}
-
-	return nil, nil
+	user.ID = id
+	return user, nil
 }
 
 func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*permission.UserPermission, error) {
 	query := `
-		SELECT id, project_uuid, email, role, created_at, updated_at
+		SELECT id, mongo_object_id, project_uuid, email, role, created_at, updated_at
 		FROM user_permissions
 		WHERE 1=1`
 
@@ -87,10 +81,11 @@ func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*
 	}
 
 	u := &permission.UserPermission{}
-	var dbID string
+	var mongoObjectID sql.NullString
 
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
-		&dbID,
+		&u.ID,
+		&mongoObjectID,
 		&u.ProjectUUID,
 		&u.Email,
 		&u.Role,
@@ -105,11 +100,8 @@ func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*
 		return nil, errors.Wrap(err, "error finding user permission")
 	}
 
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(dbID); err == nil {
-		u.ID = oid
-	} else {
-		u.ID = primitive.NewObjectID()
+	if mongoObjectID.Valid {
+		u.MongoObjectID = mongoObjectID.String
 	}
 
 	return u, nil
@@ -118,44 +110,35 @@ func (r *userRepo) Find(ctx context.Context, user *permission.UserPermission) (*
 func (r *userRepo) Update(ctx context.Context, userID string, user *permission.UserPermission) (*permission.UserPermission, error) {
 	query := `
 		UPDATE user_permissions
-		SET project_uuid = $2, email = $3, role = $4, updated_at = $5
-		WHERE id = $1`
+		SET mongo_object_id = $2, project_uuid = $3, email = $4, role = $5, updated_at = $6
+		WHERE id = $1 OR mongo_object_id = $1
+		RETURNING id`
 
 	user.UpdatedAt = time.Now()
 
-	result, err := r.db.ExecContext(ctx, query,
+	var returnedID string
+	err := r.db.QueryRowContext(ctx, query,
 		userID,
+		nullString(user.MongoObjectID),
 		user.ProjectUUID,
 		user.Email,
 		user.Role,
 		user.UpdatedAt,
-	)
+	).Scan(&returnedID)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("user permission not found")
+		}
 		return nil, errors.Wrap(err, "error updating user permission")
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil, errors.Wrap(err, "error checking affected rows")
-	}
-
-	if rowsAffected == 0 {
-		return nil, errors.New("user permission not found")
-	}
-
-	// Convert string UUID to ObjectID for compatibility
-	if oid, err := primitive.ObjectIDFromHex(userID); err == nil {
-		user.ID = oid
-	} else {
-		user.ID = primitive.NewObjectID()
-	}
-
+	user.ID = returnedID
 	return user, nil
 }
 
 func (r *userRepo) Delete(ctx context.Context, userID string) error {
-	query := `DELETE FROM user_permissions WHERE id = $1`
+	query := `DELETE FROM user_permissions WHERE id = $1 OR mongo_object_id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, userID)
 	if err != nil {
@@ -172,4 +155,12 @@ func (r *userRepo) Delete(ctx context.Context, userID string) error {
 	}
 
 	return nil
+}
+
+// nullString converts an empty string to sql.NullString
+func nullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
 }

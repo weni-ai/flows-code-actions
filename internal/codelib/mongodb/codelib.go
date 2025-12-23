@@ -27,7 +27,10 @@ func (r *codelibRepo) Create(ctx context.Context, cl *codelib.CodeLib) (*codelib
 	if err != nil {
 		return nil, err
 	}
-	cl.ID = result.InsertedID.(primitive.ObjectID)
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		cl.ID = oid.Hex()
+		cl.MongoObjectID = oid.Hex()
+	}
 	return cl, nil
 }
 

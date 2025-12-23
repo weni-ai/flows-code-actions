@@ -63,15 +63,15 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 			return err
 		}
-		if finded == nil || finded.ProjectUUID != evt.Project {
-			if _, err := c.permissionService.Create(ctx, userPerm); err != nil {
-				return err
-			}
-		} else {
-			if _, err := c.permissionService.Update(ctx, finded.ID.Hex(), userPerm); err != nil {
-				return err
-			}
+	if finded == nil || finded.ProjectUUID != evt.Project {
+		if _, err := c.permissionService.Create(ctx, userPerm); err != nil {
+			return err
 		}
+	} else {
+		if _, err := c.permissionService.Update(ctx, finded.ID, userPerm); err != nil {
+			return err
+		}
+	}
 	case "delete":
 		finded, err := c.permissionService.Find(ctx, userPerm)
 		if err != nil {
@@ -80,11 +80,11 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 			}
 			return err
 		}
-		if finded.ProjectUUID == evt.Project {
-			if err := c.permissionService.Delete(ctx, finded.ID.Hex()); err != nil {
-				return err
-			}
+	if finded.ProjectUUID == evt.Project {
+		if err := c.permissionService.Delete(ctx, finded.ID); err != nil {
+			return err
 		}
+	}
 		return nil
 	default:
 		return errors.Wrapf(rabbitmq.ErrInvalidMsg, "action: %s, for event: %s", evt.Action, eventMsg)
