@@ -22,13 +22,31 @@ func NewCodeRunRepository(db *sql.DB) coderun.Repository {
 }
 
 func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun.CodeRun, error) {
+	cr.CreatedAt = time.Now()
+	cr.UpdatedAt = time.Now()
+
+	codeUUID := cr.CodeID
+	if cr.CodeID != "" && !isUUID(cr.CodeID) {
+		var foundUUID sql.NullString
+		lookupQuery := `SELECT id FROM codes WHERE mongo_object_id = $1`
+		err := r.db.QueryRowContext(ctx, lookupQuery, cr.CodeID).Scan(&foundUUID)
+
+		if err != nil && err != sql.ErrNoRows {
+			return nil, errors.Wrap(err, "error looking up code UUID")
+		}
+
+		if foundUUID.Valid {
+			cr.CodeMongoID = cr.CodeID
+			codeUUID = foundUUID.String
+		} else {
+			codeUUID = ""
+		}
+	}
+
 	query := `
 		INSERT INTO coderuns (mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at)
 		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id`
-
-	cr.CreatedAt = time.Now()
-	cr.UpdatedAt = time.Now()
 
 	// Marshal JSON fields
 	extraJSON, err := json.Marshal(cr.Extra)
@@ -49,7 +67,7 @@ func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun
 	var id string
 	err = r.db.QueryRowContext(ctx, query,
 		nullString(cr.MongoObjectID),
-		cr.CodeID, // Pass as string, let SQL handle the cast
+		codeUUID,
 		nullString(cr.CodeMongoID),
 		cr.Status,
 		cr.Result,
@@ -222,14 +240,32 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter ma
 }
 
 func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun) (*coderun.CodeRun, error) {
+	cr.UpdatedAt = time.Now()
+
+	codeUUID := cr.CodeID
+	if cr.CodeID != "" && !isUUID(cr.CodeID) {
+		var foundUUID sql.NullString
+		lookupQuery := `SELECT id FROM codes WHERE mongo_object_id = $1`
+		err := r.db.QueryRowContext(ctx, lookupQuery, cr.CodeID).Scan(&foundUUID)
+
+		if err != nil && err != sql.ErrNoRows {
+			return nil, errors.Wrap(err, "error looking up code UUID")
+		}
+
+		if foundUUID.Valid {
+			cr.CodeMongoID = cr.CodeID
+			codeUUID = foundUUID.String
+		} else {
+			codeUUID = ""
+		}
+	}
+
 	query := `
 		UPDATE coderuns
 		SET mongo_object_id = $2, code_id = NULLIF($3, '')::uuid, code_mongo_id = $4, status = $5, result = $6, 
 		    extra = $7, params = $8, body = $9, headers = $10, updated_at = $11
 		WHERE id::text = $1 OR mongo_object_id = $1
 		RETURNING id`
-
-	cr.UpdatedAt = time.Now()
 
 	// Marshal JSON fields
 	extraJSON, err := json.Marshal(cr.Extra)
@@ -251,7 +287,7 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 	err = r.db.QueryRowContext(ctx, query,
 		id,
 		nullString(cr.MongoObjectID),
-		cr.CodeID, // Pass as string, let SQL handle the cast
+		codeUUID,
 		nullString(cr.CodeMongoID),
 		cr.Status,
 		cr.Result,
@@ -299,6 +335,28 @@ func nullString(s string) sql.NullString {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: s, Valid: true}
+}
+
+// isUUID checks if a string is a valid UUID format
+// UUID format: 8-4-4-4-12 hex characters (e.g., 550e8400-e29b-41d4-a716-446655440000)
+func isUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	// Check format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	if s[8] != '-' || s[13] != '-' || s[18] != '-' || s[23] != '-' {
+		return false
+	}
+	// Check if all other characters are hex digits
+	for i, c := range s {
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			continue
+		}
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *codeRunRepo) DeleteOlder(ctx context.Context, date time.Time, limit int64) (int64, error) {
