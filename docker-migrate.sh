@@ -32,11 +32,13 @@ print_help() {
     echo "  env             - Criar arquivo .env.docker de exemplo"
     echo ""
     echo "Migração:"
-    echo "  migrate         - Criar tabelas no PostgreSQL"
-    echo "  export          - Exportar dados do MongoDB"
-    echo "  import [dir]    - Importar CSVs para PostgreSQL"
-    echo "  full-migration  - Migração completa (export + import)"
-    echo "  verify          - Verificar dados importados"
+    echo "  migrate                      - Criar tabelas no PostgreSQL"
+    echo "  export                       - Exportar dados do MongoDB"
+    echo "  import [dir]                 - Importar CSVs para PostgreSQL"
+    echo "  import-collection <coll> [dir] - Importar apenas uma collection"
+    echo "  list-collections             - Listar collections disponíveis"
+    echo "  full-migration               - Migração completa (export + import)"
+    echo "  verify                       - Verificar dados importados"
     echo ""
     echo "Aplicação:"
     echo "  start           - Iniciar aplicação (daemon)"
@@ -51,11 +53,13 @@ print_help() {
     echo "  test-postgres   - Testar conexão com PostgreSQL"
     echo ""
     echo "Exemplos:"
-    echo "  $0 build                # Build da imagem"
-    echo "  $0 env                  # Criar .env.docker"
-    echo "  $0 migrate              # Criar tabelas"
-    echo "  $0 full-migration       # Migrar dados"
-    echo "  $0 start                # Iniciar app"
+    echo "  $0 build                              # Build da imagem"
+    echo "  $0 env                                # Criar .env.docker"
+    echo "  $0 migrate                            # Criar tabelas"
+    echo "  $0 full-migration                     # Migrar dados (tudo)"
+    echo "  $0 import-collection code             # Importar apenas 'code'"
+    echo "  $0 import-collection coderun ./exports # Importar 'coderun' de dir específico"
+    echo "  $0 start                              # Iniciar app"
     echo ""
 }
 
@@ -175,6 +179,69 @@ EOF
         
         echo ""
         echo -e "${GREEN}✓ Importação concluída${NC}"
+        ;;
+    
+    list-collections)
+        echo -e "${BLUE}📋 Collections disponíveis:${NC}"
+        echo ""
+        docker run --rm "$IMAGE_NAME" \
+            go run /app/scripts/import-csv-to-postgres.go -list-collections
+        ;;
+    
+    import-collection)
+        ensure_env_file
+        
+        if [ -z "$2" ]; then
+            echo -e "${RED}✗ Erro: Especifique a collection${NC}"
+            echo ""
+            echo "Uso: $0 import-collection <collection> [diretório]"
+            echo ""
+            echo "Collections disponíveis:"
+            echo "  - code"
+            echo "  - codelib"
+            echo "  - coderun"
+            echo "  - projects"
+            echo "  - user_permissions"
+            echo ""
+            echo "Exemplos:"
+            echo "  $0 import-collection code"
+            echo "  $0 import-collection coderun ./mongo_exports/20231230_143000"
+            exit 1
+        fi
+        
+        COLLECTION="$2"
+        
+        # Determinar diretório
+        if [ -n "$3" ]; then
+            CSV_DIR="$3"
+        else
+            # Pegar o diretório mais recente
+            CSV_DIR=$(ls -1td mongo_exports/*/ 2>/dev/null | head -n1)
+            if [ -z "$CSV_DIR" ]; then
+                echo -e "${RED}✗ Nenhum diretório de exportação encontrado${NC}"
+                echo ""
+                echo "Execute primeiro: $0 export"
+                exit 1
+            fi
+            CSV_DIR="${CSV_DIR%/}" # Remove trailing slash
+            echo -e "${YELLOW}ℹ  Usando diretório mais recente: $CSV_DIR${NC}"
+        fi
+        
+        echo -e "${BLUE}📥 Importando collection: ${YELLOW}$COLLECTION${NC}"
+        echo -e "${BLUE}   Diretório: $CSV_DIR${NC}"
+        echo ""
+        
+        docker run --rm \
+            --network host \
+            --env-file "$ENV_FILE" \
+            -v "$(pwd)/mongo_exports:/app/mongo_exports" \
+            "$IMAGE_NAME" \
+            go run /app/scripts/import-csv-to-postgres.go \
+                -dir="$CSV_DIR" \
+                -collection="$COLLECTION"
+        
+        echo ""
+        echo -e "${GREEN}✓ Collection $COLLECTION importada${NC}"
         ;;
     
     full-migration)

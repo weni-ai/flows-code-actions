@@ -253,7 +253,7 @@ func LoadDBConfig() DBConfig {
 			heartbeatInterval = 10
 		}
 
-		dbConfig.URI = Getenv("FLOWS_CODE_ACTIONS_DB_URI", "postgres://localhost:5432/codeactions?sslmode=disable")
+		dbConfig.URI = Getenv("FLOWS_CODE_ACTIONS_DB_URI", "postgres://test:test@localhost:5432/codeactions?sslmode=disable")
 		dbConfig.Name = Getenv("FLOWS_CODE_ACTIONS_DB_NAME", "codeactions")
 		dbConfig.Timeout = timeout
 		dbConfig.MaxRetries = maxRetries

@@ -10,20 +10,19 @@ COPY . .
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     --mount=type=bind,target=. \
-    go install -v ./cmd/codeactions/main.go \
-    && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+    go install -v ./cmd/codeactions/main.go
 
-FROM alpine:3.22.0
+#FROM alpine:3.22.0
+FROM golang:1.25-alpine
 
-# Instalar todas as dependências necessárias incluindo bash e postgresql-client
 RUN apk add --no-cache \
     bash \
     python3 python3-dev py3-pip \
     ffmpeg \
     postgresql-dev postgresql-client libpq libpq-dev \
     build-base \
-    go \
     mongodb-tools
+#    go
 
 RUN pip install psycopg2 psycopg2-binary pymongo --break-system-packages
 
@@ -42,6 +41,12 @@ RUN addgroup --system --gid ${GROUP_ID} ${APP_GROUP} \
 COPY --from=builder --chown=${APP_USER}:${APP_GROUP} /go/bin /app
 
 WORKDIR /app
+
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+COPY --from=builder /app/go.mod ./
+
+RUN go get github.com/lib/pq
 
 COPY --chown=${APP_USER}:${APP_GROUP} ./engines ./engines
 

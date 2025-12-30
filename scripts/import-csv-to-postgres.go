@@ -20,11 +20,14 @@ import (
 // Uso: go run scripts/import-csv-to-postgres.go -dir=./mongo_exports/20231201_120000
 
 var (
-	csvDir     = flag.String("dir", "", "Diretório contendo os arquivos CSV exportados do MongoDB")
-	pgURI      = flag.String("pg-uri", "", "URI de conexão do PostgreSQL (padrão: variável de ambiente)")
-	dryRun     = flag.Bool("dry-run", false, "Executar sem fazer alterações no banco")
-	batchSize  = flag.Int("batch-size", 1000, "Tamanho do lote para inserções em batch")
-	skipErrors = flag.Bool("skip-errors", false, "Continuar mesmo se houver erros em alguns registros")
+	csvDir          = flag.String("dir", "", "Diretório contendo os arquivos CSV exportados do MongoDB")
+	pgURI           = flag.String("pg-uri", "", "URI de conexão do PostgreSQL (padrão: variável de ambiente)")
+	dryRun          = flag.Bool("dry-run", false, "Executar sem fazer alterações no banco")
+	batchSize       = flag.Int("batch-size", 100, "Tamanho do lote para inserções em batch (padrão: 100)")
+	skipErrors      = flag.Bool("skip-errors", false, "Continuar mesmo se houver erros em alguns registros")
+	collection      = flag.String("collection", "", "Importar apenas uma collection específica (code, codelib, coderun, projects, user_permissions)")
+	listCollections = flag.Bool("list-collections", false, "Listar collections disponíveis e sair")
+	verbose         = flag.Bool("verbose", false, "Modo verbose - exibe mais detalhes de debug")
 )
 
 type ImportStats struct {
@@ -38,10 +41,51 @@ type ImportStats struct {
 func main() {
 	flag.Parse()
 
+	// Se pediu para listar collections, mostrar e sair
+	if *listCollections {
+		fmt.Println("Collections disponíveis:")
+		fmt.Println("  - code")
+		fmt.Println("  - codelib")
+		fmt.Println("  - coderun")
+		fmt.Println("  - projects")
+		fmt.Println("  - user_permissions")
+		fmt.Println()
+		fmt.Println("Uso:")
+		fmt.Println("  go run scripts/import-csv-to-postgres.go -dir=<dir> -collection=code")
+		os.Exit(0)
+	}
+
 	if *csvDir == "" {
 		fmt.Println("Erro: é necessário especificar o diretório com -dir")
-		fmt.Println("Uso: go run scripts/import-csv-to-postgres.go -dir=./mongo_exports/20231201_120000")
+		fmt.Println()
+		fmt.Println("Exemplos:")
+		fmt.Println("  # Importar todas as collections")
+		fmt.Println("  go run scripts/import-csv-to-postgres.go -dir=./mongo_exports/20231201_120000")
+		fmt.Println()
+		fmt.Println("  # Importar apenas uma collection")
+		fmt.Println("  go run scripts/import-csv-to-postgres.go -dir=./mongo_exports/20231201_120000 -collection=code")
+		fmt.Println()
+		fmt.Println("  # Listar collections disponíveis")
+		fmt.Println("  go run scripts/import-csv-to-postgres.go -list-collections")
 		os.Exit(1)
+	}
+
+	// Validar collection se especificada
+	if *collection != "" {
+		validCollections := map[string]bool{
+			"code":             true,
+			"codelib":          true,
+			"coderun":          true,
+			"projects":         true,
+			"user_permissions": true,
+		}
+		if !validCollections[*collection] {
+			fmt.Printf("Erro: collection '%s' não é válida\n", *collection)
+			fmt.Println()
+			fmt.Println("Collections válidas: code, codelib, coderun, projects, user_permissions")
+			fmt.Println("Use -list-collections para ver todas as opções")
+			os.Exit(1)
+		}
 	}
 
 	// Obter URI do PostgreSQL
@@ -58,6 +102,11 @@ func main() {
 	fmt.Println("============================================")
 	fmt.Printf("Diretório CSV: %s\n", *csvDir)
 	fmt.Printf("PostgreSQL URI: %s\n", maskPassword(dbURI))
+	if *collection != "" {
+		fmt.Printf("Collection: %s (apenas esta será importada)\n", *collection)
+	} else {
+		fmt.Println("Collection: todas")
+	}
 	if *dryRun {
 		fmt.Println("MODO DRY-RUN: Nenhuma alteração será feita")
 	}
@@ -82,7 +131,16 @@ func main() {
 			fmt.Printf("Erro ao conectar no PostgreSQL: %v\n", err)
 			os.Exit(1)
 		}
-		defer db.Close()
+		defer func() {
+			if db != nil {
+				db.Close()
+			}
+		}()
+
+		// Configurar connection pool para evitar problemas de recursos
+		db.SetMaxOpenConns(5)
+		db.SetMaxIdleConns(2)
+		db.SetConnMaxLifetime(time.Minute * 5)
 
 		// Testar conexão
 		if err := db.PingContext(ctx); err != nil {
@@ -102,10 +160,15 @@ func main() {
 		"user_permissions",
 	}
 
+	// Se uma collection específica foi especificada, importar apenas ela
+	if *collection != "" {
+		collections = []string{*collection}
+	}
+
 	totalStats := make(map[string]*ImportStats)
 
-	for _, collection := range collections {
-		csvFile := filepath.Join(*csvDir, collection+".csv")
+	for _, coll := range collections {
+		csvFile := filepath.Join(*csvDir, coll+".csv")
 
 		// Verificar se arquivo existe
 		fileInfo, err := os.Stat(csvFile)
@@ -120,30 +183,30 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("Importando: %s\n", collection)
-		stats, err := importCollection(ctx, db, collection, csvFile)
+		fmt.Printf("Importando: %s\n", coll)
+		stats, err := importCollection(ctx, db, coll, csvFile)
 		if err != nil {
 			// Tratar erros específicos que devem pular para próxima collection
 			errMsg := err.Error()
 			if strings.Contains(errMsg, "EOF") ||
 				strings.Contains(errMsg, "erro ao ler cabeçalho") ||
 				strings.Contains(errMsg, "arquivo vazio") {
-				fmt.Printf("⚠ Arquivo %s vazio ou inválido: %v (pulando)\n\n", collection, err)
+				fmt.Printf("⚠ Arquivo %s vazio ou inválido: %v (pulando)\n\n", coll, err)
 				continue
 			}
 
 			if *skipErrors {
-				fmt.Printf("✗ Erro ao importar %s: %v (continuando...)\n\n", collection, err)
+				fmt.Printf("✗ Erro ao importar %s: %v (continuando...)\n\n", coll, err)
 				continue
 			} else {
-				fmt.Printf("✗ Erro ao importar %s: %v\n", collection, err)
+				fmt.Printf("✗ Erro ao importar %s: %v\n", coll, err)
 				os.Exit(1)
 			}
 		}
 
-		totalStats[collection] = stats
+		totalStats[coll] = stats
 		fmt.Printf("✓ %s importado: %d total, %d sucesso, %d falhas, %d pulados (%.2fs)\n\n",
-			collection, stats.Total, stats.Success, stats.Failed, stats.Skipped,
+			coll, stats.Total, stats.Success, stats.Failed, stats.Skipped,
 			stats.Duration.Seconds())
 	}
 
@@ -168,6 +231,24 @@ func main() {
 	}
 
 	fmt.Println("============================================")
+
+	// Fechar conexão explicitamente antes de sair
+	if db != nil && !*dryRun {
+		if *verbose {
+			fmt.Println("\n[DEBUG] Fechando conexão com PostgreSQL...")
+		}
+		if err := db.Close(); err != nil {
+			fmt.Printf("⚠ Aviso ao fechar conexão: %v\n", err)
+		}
+		db = nil // Evitar duplo close no defer
+		if *verbose {
+			fmt.Println("[DEBUG] Conexão fechada com sucesso")
+		}
+	}
+
+	if *verbose {
+		fmt.Println("[DEBUG] Programa finalizado normalmente")
+	}
 }
 
 func importCollection(ctx context.Context, db *sql.DB, collection, csvFile string) (*ImportStats, error) {
@@ -201,6 +282,7 @@ func importCollection(ctx context.Context, db *sql.DB, collection, csvFile strin
 	// Processar registros
 	batch := [][]string{}
 	lineNum := 1 // Começar em 1 (cabeçalho)
+	lastProgress := 0
 
 	for {
 		record, err := reader.Read()
@@ -244,7 +326,16 @@ func importCollection(ctx context.Context, db *sql.DB, collection, csvFile strin
 			} else {
 				stats.Success += len(batch)
 			}
-			batch = [][]string{}
+
+			// Limpar batch para liberar memória
+			batch = nil
+			batch = make([][]string, 0, *batchSize)
+
+			// Mostrar progresso a cada 1000 registros
+			if stats.Total-lastProgress >= 1000 {
+				fmt.Printf("  Processados: %d registros...\n", stats.Total)
+				lastProgress = stats.Total
+			}
 		}
 	}
 
@@ -298,7 +389,7 @@ func importCodeBatch(ctx context.Context, db *sql.DB, headers []string, batch []
 		data := makeMap(headers, record)
 
 		// Converter _id do MongoDB para mongo_object_id
-		mongoID := data["_id"]
+		mongoID := cleanObjectID(data["_id"])
 		if mongoID == "" {
 			continue
 		}
@@ -357,7 +448,7 @@ func importCodelibBatch(ctx context.Context, db *sql.DB, headers []string, batch
 	for _, record := range batch {
 		data := makeMap(headers, record)
 
-		mongoID := data["_id"]
+		mongoID := cleanObjectID(data["_id"])
 		if mongoID == "" {
 			continue
 		}
@@ -400,14 +491,14 @@ func importCoderunBatch(ctx context.Context, db *sql.DB, headers []string, batch
 	for _, record := range batch {
 		data := makeMap(headers, record)
 
-		mongoID := data["_id"]
+		mongoID := cleanObjectID(data["_id"])
 		if mongoID == "" {
 			continue
 		}
 
 		// Buscar code_id a partir do code_mongo_id
 		var codeID *string
-		if codeMongoID := data["code_id"]; codeMongoID != "" {
+		if codeMongoID := cleanObjectID(data["code_id"]); codeMongoID != "" {
 			var id string
 			err := tx.QueryRowContext(ctx, "SELECT id FROM codes WHERE mongo_object_id = $1", codeMongoID).Scan(&id)
 			if err == nil {
@@ -445,7 +536,7 @@ func importCoderunBatch(ctx context.Context, db *sql.DB, headers []string, batch
 		_, err := tx.ExecContext(ctx, query,
 			mongoID,
 			codeID,
-			data["code_id"],
+			cleanObjectID(data["code_id"]),
 			data["status"],
 			data["result"],
 			string(extraJSON),
@@ -474,7 +565,7 @@ func importProjectsBatch(ctx context.Context, db *sql.DB, headers []string, batc
 	for _, record := range batch {
 		data := makeMap(headers, record)
 
-		mongoID := data["_id"]
+		mongoID := cleanObjectID(data["_id"])
 		if mongoID == "" {
 			continue
 		}
@@ -517,7 +608,7 @@ func importUserPermissionsBatch(ctx context.Context, db *sql.DB, headers []strin
 	for _, record := range batch {
 		data := makeMap(headers, record)
 
-		mongoID := data["_id"]
+		mongoID := cleanObjectID(data["_id"])
 		if mongoID == "" {
 			continue
 		}
@@ -562,6 +653,22 @@ func makeMap(headers, values []string) map[string]string {
 		}
 	}
 	return m
+}
+
+// cleanObjectID remove o wrapper ObjectId() se presente
+// Exemplo: ObjectId(69435f636a97774491265f73) -> 69435f636a97774491265f73
+func cleanObjectID(id string) string {
+	// Remover espaços em branco
+	id = strings.TrimSpace(id)
+
+	// Se começa com ObjectId( e termina com ), extrair o valor
+	if strings.HasPrefix(id, "ObjectId(") && strings.HasSuffix(id, ")") {
+		id = strings.TrimPrefix(id, "ObjectId(")
+		id = strings.TrimSuffix(id, ")")
+		id = strings.Trim(id, "\"'") // Remover aspas se houver
+	}
+
+	return id
 }
 
 func parseDate(dateStr string) (time.Time, error) {
