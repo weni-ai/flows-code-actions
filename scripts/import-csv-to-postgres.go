@@ -28,6 +28,7 @@ var (
 	collection      = flag.String("collection", "", "Importar apenas uma collection específica (code, codelib, coderun, projects, user_permissions)")
 	listCollections = flag.Bool("list-collections", false, "Listar collections disponíveis e sair")
 	verbose         = flag.Bool("verbose", false, "Modo verbose - exibe mais detalhes de debug")
+	strictRole      = flag.Bool("strict-role", false, "Rejeitar registros com role inválido ao invés de usar padrão")
 )
 
 type ImportStats struct {
@@ -616,21 +617,64 @@ func importUserPermissionsBatch(ctx context.Context, db *sql.DB, headers []strin
 		createdAt, _ := parseDate(data["created_at"])
 		updatedAt, _ := parseDate(data["updated_at"])
 
+		// Tentar pegar email de diferentes campos possíveis do CSV
+		email := data["user_email"]
+		if email == "" {
+			email = data["email"]
+		}
+
+		// Validar e converter role (PostgreSQL aceita apenas 1, 2, 3)
+		// 1 = Viewer, 2 = Contributor, 3 = Moderator
+		roleStr := data["role"]
+		var role int
+		fmt.Sscanf(roleStr, "%d", &role)
+
+		// Validar role: se inválido, usar 1 (Viewer) como padrão ou pular
+		if role < 1 || role > 3 {
+			if *strictRole {
+				// Modo strict: pular registro com role inválido
+				if *verbose {
+					fmt.Printf("  ⚠ Role inválido '%s' para %s - registro ignorado (modo strict)\n", roleStr, mongoID)
+				}
+				continue
+			}
+
+			// Modo permissivo: usar valor padrão
+			if *verbose {
+				fmt.Printf("  ⚠ Role inválido '%s' para %s (usando 1-Viewer como padrão)\n", roleStr, mongoID)
+			}
+			role = 1 // Default: Viewer
+		}
+
+		// Estratégia: ON CONFLICT na constraint única (project_uuid, email)
+		// Se já existe permissão para esse email+projeto, atualizar apenas se for mais recente
 		query := `
-			INSERT INTO user_permissions (mongo_object_id, user_email, project_uuid, role, created_at, updated_at)
+			INSERT INTO user_permissions (mongo_object_id, email, project_uuid, role, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (mongo_object_id) DO UPDATE SET
-				user_email = EXCLUDED.user_email,
-				project_uuid = EXCLUDED.project_uuid,
-				role = EXCLUDED.role,
-				updated_at = EXCLUDED.updated_at
+			ON CONFLICT (project_uuid, email) 
+			DO UPDATE SET
+				mongo_object_id = CASE 
+					WHEN user_permissions.updated_at < EXCLUDED.updated_at 
+					THEN EXCLUDED.mongo_object_id 
+					ELSE user_permissions.mongo_object_id 
+				END,
+				role = CASE 
+					WHEN user_permissions.updated_at < EXCLUDED.updated_at 
+					THEN EXCLUDED.role 
+					ELSE user_permissions.role 
+				END,
+				updated_at = CASE 
+					WHEN user_permissions.updated_at < EXCLUDED.updated_at 
+					THEN EXCLUDED.updated_at 
+					ELSE user_permissions.updated_at 
+				END
 		`
 
 		_, err := tx.ExecContext(ctx, query,
 			mongoID,
-			data["user_email"],
+			email,
 			data["project_uuid"],
-			data["role"],
+			role, // Usar role validado
 			createdAt,
 			updatedAt,
 		)
