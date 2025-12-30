@@ -13,7 +13,7 @@ import action
 
 # PostgreSQL configuration
 pg_database = os.environ.get("FLOWS_CODE_ACTIONS_DB_NAME", "code-actions")
-pg_uri = os.environ.get("FLOWS_CODE_ACTIONS_DB_URI", "postgres://localhost:5432/codeactions?sslmode=disable")
+pg_uri = os.environ.get("FLOWS_CODE_ACTIONS_DB_URI", "postgres://test:test@localhost:5432/codeactions?sslmode=disable")
 
 # Initialize PostgreSQL connection
 pg_conn = None
