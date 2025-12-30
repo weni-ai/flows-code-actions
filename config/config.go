@@ -154,7 +154,7 @@ func LoadHTTPConfig() HTTPConfig {
 func LoadDBConfig() DBConfig {
 
 	dbConfig := DBConfig{}
-	dbType := Getenv("FLOWS_CODE_ACTIONS_DB_TYPE", "mongodb")
+	dbType := Getenv("FLOWS_CODE_ACTIONS_DB_TYPE", "postgres")
 	dbConfig.Type = dbType
 
 	if dbType == "mongodb" {
@@ -330,19 +330,19 @@ func LoadEDAConfig() EDAConfig {
 }
 
 func LoadS3Config() S3Config {
-	enabled, err := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_S3_ENABLED", "false"))
+	enabled, err := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_S3_ENABLED", "true"))
 	if err != nil {
 		enabled = false
 	}
 
 	return S3Config{
 		Region:          Getenv("FLOWS_CODE_ACTIONS_S3_REGION", "us-east-1"),
-		BucketName:      Getenv("FLOWS_CODE_ACTIONS_S3_BUCKET_NAME", ""),
-		AccessKeyID:     Getenv("FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID", ""),
-		SecretAccessKey: Getenv("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY", ""),
+		BucketName:      Getenv("FLOWS_CODE_ACTIONS_S3_BUCKET_NAME", "codeactions-dev"),
+		AccessKeyID:     Getenv("FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID", "test"),
+		SecretAccessKey: Getenv("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY", "test"),
 		Prefix:          Getenv("FLOWS_CODE_ACTIONS_S3_PREFIX", "codeactions"),
 		Enabled:         enabled,
-		Endpoint:        Getenv("FLOWS_CODE_ACTIONS_S3_ENDPOINT", ""), // For LocalStack: http://localhost:4566
+		Endpoint:        Getenv("FLOWS_CODE_ACTIONS_S3_ENDPOINT", "http://localhost:4566"), // For LocalStack: http://localhost:4566
 	}
 }
 
