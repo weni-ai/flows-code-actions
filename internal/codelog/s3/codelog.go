@@ -72,6 +72,43 @@ func (r *codelogRepo) generateSearchPrefix(runID, codeID string, date *time.Time
 	return basePath + "/"
 }
 
+// generateSearchPrefixes creates multiple prefixes for searching logs
+// Returns two prefixes: one with potential bucket name duplication (legacy) and one correct
+// This handles the case where logs were saved with bucket name in the path due to endpoint misconfiguration
+func (r *codelogRepo) generateSearchPrefixes(runID, codeID string, date *time.Time) []string {
+	prefixes := make([]string, 0, 2)
+
+	// First try: Legacy path with bucket name duplication (if bucket name is in prefix)
+	// This handles logs saved when endpoint included bucket name
+	// e.g., "weni-staging-codeactions/codeactions/logs/..."
+	if strings.Contains(r.bucketName, "-") {
+		legacyBasePath := path.Join(r.bucketName, r.prefix, "logs")
+
+		if date != nil {
+			year, month, day := date.Date()
+			legacyBasePath = path.Join(legacyBasePath,
+				fmt.Sprintf("%04d", year),
+				fmt.Sprintf("%02d", int(month)),
+				fmt.Sprintf("%02d", day),
+			)
+		}
+
+		if runID != "" {
+			legacyBasePath = path.Join(legacyBasePath, runID)
+			if codeID != "" {
+				legacyBasePath = path.Join(legacyBasePath, codeID)
+			}
+		}
+
+		prefixes = append(prefixes, legacyBasePath+"/")
+	}
+
+	// Second try: Correct path (current implementation)
+	prefixes = append(prefixes, r.generateSearchPrefix(runID, codeID, date))
+
+	return prefixes
+}
+
 func (r *codelogRepo) Create(ctx context.Context, log *codelog.CodeLog) (*codelog.CodeLog, error) {
 	// Generate new ID if not present
 	if log.ID == "" {
@@ -125,14 +162,17 @@ func (r *codelogRepo) GetByID(ctx context.Context, id string) (*codelog.CodeLog,
 	now := time.Now().UTC()
 	for i := 0; i < 30; i++ {
 		searchDate := now.AddDate(0, 0, -i)
-		prefix := r.generateSearchPrefix("", "", &searchDate)
+		prefixes := r.generateSearchPrefixes("", "", &searchDate)
 
-		log, err := r.searchLogByID(ctx, prefix, id)
-		if err != nil {
-			continue // Try next date
-		}
-		if log != nil {
-			return log, nil
+		// Try all possible prefixes (legacy and correct)
+		for _, prefix := range prefixes {
+			log, err := r.searchLogByID(ctx, prefix, id)
+			if err != nil {
+				continue // Try next prefix
+			}
+			if log != nil {
+				return log, nil
+			}
 		}
 	}
 
@@ -150,7 +190,7 @@ func (r *codelogRepo) searchLogByID(ctx context.Context, prefix, logID string) (
 		for _, obj := range page.Contents {
 			if strings.Contains(*obj.Key, logID+".json") {
 				foundKey = *obj.Key // Store the actual key found
-				return false // Found it, stop pagination
+				return false        // Found it, stop pagination
 			}
 		}
 		return true // Continue pagination
@@ -164,7 +204,7 @@ func (r *codelogRepo) searchLogByID(ctx context.Context, prefix, logID string) (
 	if foundKey == "" {
 		return nil, nil // Not found in this prefix
 	}
-	
+
 	return r.getLogFromS3(ctx, foundKey)
 }
 
@@ -198,14 +238,17 @@ func (r *codelogRepo) ListRunLogs(ctx context.Context, runID, codeID string, lim
 	now := time.Now().UTC()
 	for i := 0; i < 7; i++ {
 		searchDate := now.AddDate(0, 0, -i)
-		prefix := r.generateSearchPrefix(runID, codeID, &searchDate)
+		prefixes := r.generateSearchPrefixes(runID, codeID, &searchDate)
 
-		dayLogs, err := r.listLogsFromPrefix(ctx, prefix, runID, codeID)
-		if err != nil {
-			continue // Skip this date on error
+		// Try all possible prefixes (legacy with bucket name duplication and correct)
+		for _, prefix := range prefixes {
+			dayLogs, err := r.listLogsFromPrefix(ctx, prefix, runID, codeID)
+			if err != nil {
+				continue // Skip this prefix on error
+			}
+
+			logs = append(logs, dayLogs...)
 		}
-
-		logs = append(logs, dayLogs...)
 	}
 
 	// Sort logs by creation time (newest first)
@@ -346,37 +389,44 @@ func (r *codelogRepo) DeleteOlder(ctx context.Context, date time.Time, limit int
 	// We'll search day by day backwards from the date
 	searchDate := date
 	for deletedCount < limit {
-		prefix := r.generateSearchPrefix("", "", &searchDate)
+		prefixes := r.generateSearchPrefixes("", "", &searchDate)
 
-		input := &s3.ListObjectsV2Input{
-			Bucket:  aws.String(r.bucketName),
-			Prefix:  aws.String(prefix),
-			MaxKeys: aws.Int64(1000), // Process in batches
-		}
+		// Try all possible prefixes (legacy and correct)
+		for _, prefix := range prefixes {
+			input := &s3.ListObjectsV2Input{
+				Bucket:  aws.String(r.bucketName),
+				Prefix:  aws.String(prefix),
+				MaxKeys: aws.Int64(1000), // Process in batches
+			}
 
-		result, err := r.s3Client.ListObjectsV2WithContext(ctx, input)
-		if err != nil {
-			break
-		}
+			result, err := r.s3Client.ListObjectsV2WithContext(ctx, input)
+			if err != nil {
+				continue // Skip this prefix on error
+			}
 
-		// Delete objects from this date
-		for _, obj := range result.Contents {
+			// Delete objects from this date
+			for _, obj := range result.Contents {
+				if deletedCount >= limit {
+					break
+				}
+
+				// Check if object is actually older than date
+				if obj.LastModified.After(date) {
+					continue
+				}
+
+				_, err := r.s3Client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+					Bucket: aws.String(r.bucketName),
+					Key:    obj.Key,
+				})
+
+				if err == nil {
+					deletedCount++
+				}
+			}
+
 			if deletedCount >= limit {
 				break
-			}
-
-			// Check if object is actually older than date
-			if obj.LastModified.After(date) {
-				continue
-			}
-
-			_, err := r.s3Client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
-				Bucket: aws.String(r.bucketName),
-				Key:    obj.Key,
-			})
-
-			if err == nil {
-				deletedCount++
 			}
 		}
 
@@ -404,35 +454,38 @@ func (r *codelogRepo) Count(ctx context.Context, runID, codeID string) (int64, e
 	now := time.Now().UTC()
 	for i := 0; i < 30; i++ {
 		searchDate := now.AddDate(0, 0, -i)
-		prefix := r.generateSearchPrefix(runID, codeID, &searchDate)
+		prefixes := r.generateSearchPrefixes(runID, codeID, &searchDate)
 
-		input := &s3.ListObjectsV2Input{
-			Bucket: aws.String(r.bucketName),
-			Prefix: aws.String(prefix),
-		}
-
-		err := r.s3Client.ListObjectsV2PagesWithContext(ctx, input, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
-			for _, obj := range page.Contents {
-				// Skip if not a JSON file
-				if !strings.HasSuffix(*obj.Key, ".json") {
-					continue
-				}
-
-				// Filter by runID/codeID if specified and not in path
-				if runID != "" && !strings.Contains(*obj.Key, runID) {
-					continue
-				}
-				if codeID != "" && !strings.Contains(*obj.Key, codeID) {
-					continue
-				}
-
-				count++
+		// Try all possible prefixes (legacy and correct)
+		for _, prefix := range prefixes {
+			input := &s3.ListObjectsV2Input{
+				Bucket: aws.String(r.bucketName),
+				Prefix: aws.String(prefix),
 			}
-			return true
-		})
 
-		if err != nil {
-			continue // Skip this date on error
+			err := r.s3Client.ListObjectsV2PagesWithContext(ctx, input, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+				for _, obj := range page.Contents {
+					// Skip if not a JSON file
+					if !strings.HasSuffix(*obj.Key, ".json") {
+						continue
+					}
+
+					// Filter by runID/codeID if specified and not in path
+					if runID != "" && !strings.Contains(*obj.Key, runID) {
+						continue
+					}
+					if codeID != "" && !strings.Contains(*obj.Key, codeID) {
+						continue
+					}
+
+					count++
+				}
+				return true
+			})
+
+			if err != nil {
+				continue // Skip this prefix on error
+			}
 		}
 	}
 
