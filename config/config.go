@@ -342,7 +342,7 @@ func LoadS3Config() S3Config {
 		SecretAccessKey: Getenv("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY", "test"),
 		Prefix:          Getenv("FLOWS_CODE_ACTIONS_S3_PREFIX", "codeactions"),
 		Enabled:         enabled,
-		Endpoint:        Getenv("FLOWS_CODE_ACTIONS_S3_ENDPOINT", "http://localhost:4566"), // For LocalStack: http://localhost:4566
+		Endpoint:        Getenv("FLOWS_CODE_ACTIONS_S3_ENDPOINT", ""),
 	}
 }
 

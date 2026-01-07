@@ -26,7 +26,7 @@ except Exception as e:
 
 # S3 configuration
 s3_enabled = os.environ.get("FLOWS_CODE_ACTIONS_S3_ENABLED", "false").lower() == "true"
-s3_endpoint = os.environ.get("FLOWS_CODE_ACTIONS_S3_ENDPOINT")
+s3_endpoint = os.environ.get("FLOWS_CODE_ACTIONS_S3_ENDPOINT") or None  # Treat empty string as None
 s3_region = os.environ.get("FLOWS_CODE_ACTIONS_S3_REGION", "us-east-1")
 s3_bucket = os.environ.get("FLOWS_CODE_ACTIONS_S3_BUCKET_NAME")
 s3_prefix = os.environ.get("FLOWS_CODE_ACTIONS_S3_PREFIX", "codeactions")

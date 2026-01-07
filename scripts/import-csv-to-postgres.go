@@ -483,12 +483,48 @@ func importCodelibBatch(ctx context.Context, db *sql.DB, headers []string, batch
 }
 
 func importCoderunBatch(ctx context.Context, db *sql.DB, headers []string, batch [][]string) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
+	// Criar tabela temporária
+	_, err = tx.ExecContext(ctx, `
+		CREATE TEMP TABLE IF NOT EXISTS temp_coderuns (
+			mongo_object_id TEXT,
+			code_id UUID,
+			code_mongo_id TEXT,
+			status TEXT,
+			result TEXT,
+			extra JSONB,
+			params JSONB,
+			body TEXT,
+			headers JSONB,
+			created_at TIMESTAMP,
+			updated_at TIMESTAMP
+		) ON COMMIT DROP
+	`)
+	if err != nil {
+		return fmt.Errorf("erro ao criar tabela temporária: %w", err)
+	}
+
+	// Preparar statement
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO temp_coderuns 
+		(mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`)
+	if err != nil {
+		return fmt.Errorf("erro ao preparar statement: %w", err)
+	}
+	defer stmt.Close()
+
+	// Inserir na temp table
 	for _, record := range batch {
 		data := makeMap(headers, record)
 
@@ -517,24 +553,11 @@ func importCoderunBatch(ctx context.Context, db *sql.DB, headers []string, batch
 		params := parseJSON(data["params"])
 		headersJSON := parseJSON(data["headers"])
 
-		query := `
-			INSERT INTO coderuns (mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-			ON CONFLICT (mongo_object_id) DO UPDATE SET
-				status = EXCLUDED.status,
-				result = EXCLUDED.result,
-				extra = EXCLUDED.extra,
-				params = EXCLUDED.params,
-				body = EXCLUDED.body,
-				headers = EXCLUDED.headers,
-				updated_at = EXCLUDED.updated_at
-		`
-
 		extraJSON, _ := json.Marshal(extra)
 		paramsJSON, _ := json.Marshal(params)
 		headersJSONBytes, _ := json.Marshal(headersJSON)
 
-		_, err := tx.ExecContext(ctx, query,
+		_, err := stmt.ExecContext(ctx,
 			mongoID,
 			codeID,
 			cleanObjectID(data["code_id"]),
@@ -549,8 +572,28 @@ func importCoderunBatch(ctx context.Context, db *sql.DB, headers []string, batch
 		)
 
 		if err != nil {
-			return fmt.Errorf("erro ao inserir coderun %s: %w", mongoID, err)
+			return fmt.Errorf("erro ao inserir na temp table: %w", err)
 		}
+	}
+
+	// Merge otimizado
+	mergeQuery := `
+		INSERT INTO coderuns (mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at)
+		SELECT mongo_object_id, code_id, code_mongo_id, status, result, extra::jsonb, params::jsonb, body, headers::jsonb, created_at, updated_at
+		FROM temp_coderuns
+		ON CONFLICT (mongo_object_id) DO UPDATE SET
+			status = EXCLUDED.status,
+			result = EXCLUDED.result,
+			extra = EXCLUDED.extra,
+			params = EXCLUDED.params,
+			body = EXCLUDED.body,
+			headers = EXCLUDED.headers,
+			updated_at = EXCLUDED.updated_at
+	`
+
+	_, err = tx.ExecContext(ctx, mergeQuery)
+	if err != nil {
+		return fmt.Errorf("erro ao fazer merge: %w", err)
 	}
 
 	return tx.Commit()
@@ -600,12 +643,44 @@ func importProjectsBatch(ctx context.Context, db *sql.DB, headers []string, batc
 }
 
 func importUserPermissionsBatch(ctx context.Context, db *sql.DB, headers []string, batch [][]string) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
+	// Criar tabela temporária para bulk insert
+	_, err = tx.ExecContext(ctx, `
+		CREATE TEMP TABLE IF NOT EXISTS temp_user_permissions (
+			mongo_object_id TEXT,
+			email TEXT,
+			project_uuid TEXT,
+			role INTEGER,
+			created_at TIMESTAMP,
+			updated_at TIMESTAMP
+		) ON COMMIT DROP
+	`)
+	if err != nil {
+		return fmt.Errorf("erro ao criar tabela temporária: %w", err)
+	}
+
+	// Preparar statement para bulk insert na tabela temporária
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO temp_user_permissions 
+		(mongo_object_id, email, project_uuid, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`)
+	if err != nil {
+		return fmt.Errorf("erro ao preparar statement: %w", err)
+	}
+	defer stmt.Close()
+
+	// Inserir todos os registros na tabela temporária
+	validRecords := 0
 	for _, record := range batch {
 		data := makeMap(headers, record)
 
@@ -614,74 +689,76 @@ func importUserPermissionsBatch(ctx context.Context, db *sql.DB, headers []strin
 			continue
 		}
 
-		createdAt, _ := parseDate(data["created_at"])
-		updatedAt, _ := parseDate(data["updated_at"])
-
 		// Tentar pegar email de diferentes campos possíveis do CSV
 		email := data["user_email"]
 		if email == "" {
 			email = data["email"]
 		}
 
-		// Validar e converter role (PostgreSQL aceita apenas 1, 2, 3)
-		// 1 = Viewer, 2 = Contributor, 3 = Moderator
+		if email == "" {
+			if *verbose {
+				fmt.Printf("  ⚠ Email vazio para %s - registro ignorado\n", mongoID)
+			}
+			continue
+		}
+
+		createdAt, _ := parseDate(data["created_at"])
+		updatedAt, _ := parseDate(data["updated_at"])
+
+		// Validar e converter role
 		roleStr := data["role"]
 		var role int
 		fmt.Sscanf(roleStr, "%d", &role)
 
-		// Validar role: se inválido, usar 1 (Viewer) como padrão ou pular
 		if role < 1 || role > 3 {
 			if *strictRole {
-				// Modo strict: pular registro com role inválido
 				if *verbose {
 					fmt.Printf("  ⚠ Role inválido '%s' para %s - registro ignorado (modo strict)\n", roleStr, mongoID)
 				}
 				continue
 			}
-
-			// Modo permissivo: usar valor padrão
 			if *verbose {
 				fmt.Printf("  ⚠ Role inválido '%s' para %s (usando 1-Viewer como padrão)\n", roleStr, mongoID)
 			}
-			role = 1 // Default: Viewer
+			role = 1
 		}
 
-		// Estratégia: ON CONFLICT na constraint única (project_uuid, email)
-		// Se já existe permissão para esse email+projeto, atualizar apenas se for mais recente
-		query := `
-			INSERT INTO user_permissions (mongo_object_id, email, project_uuid, role, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (project_uuid, email) 
-			DO UPDATE SET
-				mongo_object_id = CASE 
-					WHEN user_permissions.updated_at < EXCLUDED.updated_at 
-					THEN EXCLUDED.mongo_object_id 
-					ELSE user_permissions.mongo_object_id 
-				END,
-				role = CASE 
-					WHEN user_permissions.updated_at < EXCLUDED.updated_at 
-					THEN EXCLUDED.role 
-					ELSE user_permissions.role 
-				END,
-				updated_at = CASE 
-					WHEN user_permissions.updated_at < EXCLUDED.updated_at 
-					THEN EXCLUDED.updated_at 
-					ELSE user_permissions.updated_at 
-				END
-		`
-
-		_, err := tx.ExecContext(ctx, query,
+		_, err := stmt.ExecContext(ctx,
 			mongoID,
 			email,
 			data["project_uuid"],
-			role, // Usar role validado
+			role,
 			createdAt,
 			updatedAt,
 		)
 
 		if err != nil {
-			return fmt.Errorf("erro ao inserir user_permission %s: %w", mongoID, err)
+			return fmt.Errorf("erro ao inserir na temp table: %w", err)
 		}
+		validRecords++
+	}
+
+	if validRecords == 0 {
+		return nil
+	}
+
+	// Fazer merge da tabela temporária para a tabela final
+	// Estratégia otimizada: INSERT apenas novos ou UPDATE apenas se mais recente
+	mergeQuery := `
+		INSERT INTO user_permissions (mongo_object_id, email, project_uuid, role, created_at, updated_at)
+		SELECT t.mongo_object_id, t.email, t.project_uuid, t.role, t.created_at, t.updated_at
+		FROM temp_user_permissions t
+		ON CONFLICT (project_uuid, email) 
+		DO UPDATE SET
+			mongo_object_id = EXCLUDED.mongo_object_id,
+			role = EXCLUDED.role,
+			updated_at = EXCLUDED.updated_at
+		WHERE EXCLUDED.updated_at > user_permissions.updated_at
+	`
+
+	_, err = tx.ExecContext(ctx, mergeQuery)
+	if err != nil {
+		return fmt.Errorf("erro ao fazer merge: %w", err)
 	}
 
 	return tx.Commit()
