@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/google/uuid"
 )
 
 type inMemoryRepo struct {
@@ -23,7 +23,7 @@ func (r *inMemoryRepo) Create(ctx context.Context, p *UserPermission) (*UserPerm
 	}
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = time.Now()
-	p.ID = primitive.NewObjectID()
+	p.ID = uuid.New().String()
 	r.permissions[p.Email] = p
 	return p, nil
 }

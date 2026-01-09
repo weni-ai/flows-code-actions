@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: localstack-s3
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"            # LocalStack gateway
+      - "4510-4559:4510-4559"  # external services port range
+    environment:
+      # LocalStack configuration
+      - DEBUG=${DEBUG:-0}
+      - SERVICES=s3
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LOCALSTACK_HOST=localhost
+      - DATA_DIR=/var/lib/localstack/data
+      # S3 specific settings
+      - S3_SKIP_SIGNATURE_VALIDATION=1
+      - S3_SKIP_KMS_KEY_VALIDATION=1
+      # Avoid /tmp/localstack conflicts
+      - TMPDIR=/var/tmp/localstack
+    volumes:
+      - "localstack-data:/var/lib/localstack"
+      - "localstack-tmp:/var/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack:/docker-entrypoint-initaws.d"  # Init scripts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  localstack-data:
+  localstack-tmp:
+
+networks:
+  default:
+    name: localstack-network
+

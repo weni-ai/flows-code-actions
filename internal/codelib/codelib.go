@@ -13,7 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type LanguageType string
@@ -23,9 +22,10 @@ const (
 )
 
 type CodeLib struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Name     string             `bson:"name,omitempty" json:"name,omitempty"`
-	Language LanguageType       `bson:"language,omitempty" json:"language,omitempty"`
+	ID            string `json:"id,omitempty"`                              // PostgreSQL UUID (primary key)
+	MongoObjectID string `json:"mongo_object_id,omitempty" bson:"_id,omitempty"` // MongoDB ObjectID for backward compatibility
+	Name          string       `bson:"name,omitempty" json:"name,omitempty"`
+	Language      LanguageType `bson:"language,omitempty" json:"language,omitempty"`
 
 	CreatedAt time.Time `bson:"created_at,omitempty" json:"created_at,omitempty"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`

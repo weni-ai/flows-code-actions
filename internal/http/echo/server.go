@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"time"
@@ -57,7 +58,8 @@ func (s *EchoPermissionHandler) CheckPermission(ctx context.Context, c echo.Cont
 type Server struct {
 	Echo     *echo.Echo
 	Config   *config.Config
-	DB       *mongo.Database
+	DB       *mongo.Database // MongoDB connection (legacy)
+	SQLDB    *sql.DB         // PostgreSQL connection
 	Redis    *redis.Client
 	Locker   *redislock.Client
 	Services *Services

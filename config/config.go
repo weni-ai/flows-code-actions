@@ -22,6 +22,7 @@ type Config struct {
 	Cleaner            CleanerConfig
 	Blacklist          string
 	Skiplist           string
+	S3                 S3Config
 
 	HealthCheckCacheTime int64
 }
@@ -42,9 +43,10 @@ type HTTPConfig struct {
 }
 
 type DBConfig struct {
+	Type                     string // Database type: "mongodb" or "postgres"
 	URI                      string
 	Name                     string
-	Timeout                  int64 // Mongodb start timeout in seconds, this timeout is only for the initial connection, after the connection is established, the timeout is not applied anymore and for retry is used the retry options of the mongodb driver
+	Timeout                  int64 // Database start timeout in seconds
 	MaxRetries               int   // Maximum number of connection retry attempts
 	MaxPoolSize              int   // Maximum number of connections in the connection pool
 	MinPoolSize              int   // Minimum number of connections in the connection pool
@@ -87,6 +89,16 @@ type EDAConfig struct {
 	PermissionQueueName    string
 }
 
+type S3Config struct {
+	Region          string
+	BucketName      string
+	AccessKeyID     string
+	SecretAccessKey string
+	Prefix          string
+	Enabled         bool
+	Endpoint        string // Custom endpoint for LocalStack or other S3-compatible services
+}
+
 func NewConfig() *Config {
 	return &Config{
 		HTTP:            LoadHTTPConfig(),
@@ -102,6 +114,7 @@ func NewConfig() *Config {
 		Cleaner:         NewCleanerConfig(),
 		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 		Skiplist:        Getenv("FLOWS_CODE_ACTIONS_SKIPLIST", ""),
+		S3:              LoadS3Config(),
 
 		HealthCheckCacheTime: GetenvInt64("FLOWS_CODE_ACTIONS_HEALTH_CHECK_CACHE_TIME", 3),
 	}
@@ -139,59 +152,120 @@ func LoadHTTPConfig() HTTPConfig {
 }
 
 func LoadDBConfig() DBConfig {
-	timeout, _ := strconv.ParseInt(
-		Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "35"), 10, 64)
-	if timeout == 0 {
-		timeout = 35
+
+	dbConfig := DBConfig{}
+	dbType := Getenv("FLOWS_CODE_ACTIONS_DB_TYPE", "postgres")
+	dbConfig.Type = dbType
+
+	if dbType == "mongodb" {
+		var err error
+		timeout, _ := strconv.ParseInt(
+			Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_TIMEOUT", "35"), 10, 64)
+		if timeout == 0 {
+			timeout = 35
+		}
+
+		maxRetries, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MAX_RETRIES", "3"))
+		if err != nil {
+			maxRetries = 3
+		}
+
+		maxPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MAX_POOL_SIZE", "100"))
+		if err != nil {
+			maxPoolSize = 100
+		}
+
+		minPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MIN_POOL_SIZE", "5"))
+		if err != nil {
+			minPoolSize = 5
+		}
+
+		connectTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_CONNECT_TIMEOUT", "30"))
+		if err != nil {
+			connectTimeout = 30
+		}
+
+		serverSelectionTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_SERVER_SELECTION_TIMEOUT", "30"))
+		if err != nil {
+			serverSelectionTimeout = 30
+		}
+
+		socketTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_SOCKET_TIMEOUT", "30"))
+		if err != nil {
+			socketTimeout = 30
+		}
+
+		heartbeatInterval, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_HEARTBEAT_INTERVAL", "10"))
+		if err != nil {
+			heartbeatInterval = 10
+		}
+
+		dbConfig.URI = Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017")
+		dbConfig.Name = Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions")
+		dbConfig.Timeout = timeout
+		dbConfig.MaxRetries = maxRetries
+		dbConfig.MaxPoolSize = maxPoolSize
+		dbConfig.MinPoolSize = minPoolSize
+		dbConfig.ConnectTimeoutSeconds = connectTimeout
+		dbConfig.ServerSelectionTimeout = serverSelectionTimeout
+		dbConfig.SocketTimeoutSeconds = socketTimeout
+		dbConfig.HeartbeatIntervalSeconds = heartbeatInterval
+	} else {
+
+		timeout, err := strconv.ParseInt(
+			Getenv("FLOWS_CODE_ACTIONS_POSTGRES_DB_TIMEOUT", "35"), 10, 64)
+		if timeout == 0 {
+			timeout = 35
+		}
+
+		maxRetries, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_MAX_RETRIES", "3"))
+		if err != nil {
+			maxRetries = 3
+		}
+
+		maxPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_MAX_POOL_SIZE", "100"))
+		if err != nil {
+			maxPoolSize = 100
+		}
+
+		minPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_MIN_POOL_SIZE", "5"))
+		if err != nil {
+			minPoolSize = 5
+		}
+
+		connectTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_CONNECT_TIMEOUT", "30"))
+		if err != nil {
+			connectTimeout = 30
+		}
+
+		serverSelectionTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_SERVER_SELECTION_TIMEOUT", "30"))
+		if err != nil {
+			serverSelectionTimeout = 30
+		}
+
+		socketTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_SOCKET_TIMEOUT", "30"))
+		if err != nil {
+			socketTimeout = 30
+		}
+
+		heartbeatInterval, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_DB_HEARTBEAT_INTERVAL", "10"))
+		if err != nil {
+			heartbeatInterval = 10
+		}
+
+		dbConfig.URI = Getenv("FLOWS_CODE_ACTIONS_DB_URI", "postgres://test:test@localhost:5432/codeactions?sslmode=disable")
+		dbConfig.Name = Getenv("FLOWS_CODE_ACTIONS_DB_NAME", "codeactions")
+		dbConfig.Timeout = timeout
+		dbConfig.MaxRetries = maxRetries
+		dbConfig.MaxPoolSize = maxPoolSize
+		dbConfig.MinPoolSize = minPoolSize
+		dbConfig.ConnectTimeoutSeconds = connectTimeout
+		dbConfig.ServerSelectionTimeout = serverSelectionTimeout
+		dbConfig.SocketTimeoutSeconds = socketTimeout
+		dbConfig.HeartbeatIntervalSeconds = heartbeatInterval
 	}
 
-	maxRetries, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MAX_RETRIES", "3"))
-	if err != nil {
-		maxRetries = 3
-	}
-
-	maxPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MAX_POOL_SIZE", "100"))
-	if err != nil {
-		maxPoolSize = 100
-	}
-
-	minPoolSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_MIN_POOL_SIZE", "5"))
-	if err != nil {
-		minPoolSize = 5
-	}
-
-	connectTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_CONNECT_TIMEOUT", "30"))
-	if err != nil {
-		connectTimeout = 30
-	}
-
-	serverSelectionTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_SERVER_SELECTION_TIMEOUT", "30"))
-	if err != nil {
-		serverSelectionTimeout = 30
-	}
-
-	socketTimeout, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_SOCKET_TIMEOUT", "30"))
-	if err != nil {
-		socketTimeout = 30
-	}
-
-	heartbeatInterval, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_HEARTBEAT_INTERVAL", "10"))
-	if err != nil {
-		heartbeatInterval = 10
-	}
-
-	return DBConfig{
-		URI:                      Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_URI", "mongodb://localhost:27017"),
-		Name:                     Getenv("FLOWS_CODE_ACTIONS_MONGO_DB_NAME", "code-actions"),
-		Timeout:                  timeout,
-		MaxRetries:               maxRetries,
-		MaxPoolSize:              maxPoolSize,
-		MinPoolSize:              minPoolSize,
-		ConnectTimeoutSeconds:    connectTimeout,
-		ServerSelectionTimeout:   serverSelectionTimeout,
-		SocketTimeoutSeconds:     socketTimeout,
-		HeartbeatIntervalSeconds: heartbeatInterval,
-	}
+	return dbConfig
 }
 
 func LoadOIDCConfig() OIDCConfig {
@@ -252,6 +326,23 @@ func LoadEDAConfig() EDAConfig {
 		ProjectQueueName:       projectQueueName,
 		PermissionExchangeName: permissionExchangeName,
 		PermissionQueueName:    permissionQueueName,
+	}
+}
+
+func LoadS3Config() S3Config {
+	enabled, err := strconv.ParseBool(Getenv("FLOWS_CODE_ACTIONS_S3_ENABLED", "true"))
+	if err != nil {
+		enabled = false
+	}
+
+	return S3Config{
+		Region:          Getenv("FLOWS_CODE_ACTIONS_S3_REGION", "us-east-1"),
+		BucketName:      Getenv("FLOWS_CODE_ACTIONS_S3_BUCKET_NAME", "codeactions-dev"),
+		AccessKeyID:     Getenv("FLOWS_CODE_ACTIONS_S3_ACCESS_KEY_ID", "test"),
+		SecretAccessKey: Getenv("FLOWS_CODE_ACTIONS_S3_SECRET_ACCESS_KEY", "test"),
+		Prefix:          Getenv("FLOWS_CODE_ACTIONS_S3_PREFIX", "codeactions"),
+		Enabled:         enabled,
+		Endpoint:        Getenv("FLOWS_CODE_ACTIONS_S3_ENDPOINT", ""),
 	}
 }
 

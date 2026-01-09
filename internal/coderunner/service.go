@@ -18,7 +18,6 @@ import (
 	"github.com/weni-ai/flows-code-actions/config"
 	"github.com/weni-ai/flows-code-actions/internal/codelog"
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var resourceConfig *specs.LinuxResources
@@ -34,9 +33,8 @@ func NewCodeRunnerService(confs *config.Config, coderun *coderun.Service, codelo
 }
 
 func (s *Service) RunCode(ctx context.Context, codeID string, code string, language string, params map[string]interface{}, body string, headers map[string]interface{}) (*coderun.CodeRun, error) {
-	cID, _ := primitive.ObjectIDFromHex(codeID)
 	cr := &coderun.CodeRun{
-		CodeID:  cID,
+		CodeID:  codeID,
 		Status:  coderun.StatusStarted,
 		Params:  params,
 		Body:    body,
@@ -50,7 +48,7 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 
 	switch language {
 	case "python":
-		_, err = s.runPython(ctx, codeID, newCodeRun.ID.Hex(), code, params, body, headers)
+		_, err = s.runPython(ctx, codeID, newCodeRun.ID, code, params, body, headers)
 	case "javascript":
 		_, err = runJs(ctx, code)
 	case "go":
@@ -62,19 +60,19 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 		log.WithError(err).Error(err.Error())
 		newCodeRun.Status = coderun.StatusFailed
 		newCodeRun.Result = errors.Wrap(err, "error on executing code").Error()
-		errcoderun, cerr := s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
+		errcoderun, cerr := s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
 		if cerr != nil {
 			return errcoderun, cerr
 		}
 		return errcoderun, errors.Wrap(err, "error on executing code")
 	}
 
-	newCodeRun, err = s.codeRun.GetByID(ctx, newCodeRun.ID.Hex())
+	newCodeRun, err = s.codeRun.GetByID(ctx, newCodeRun.ID)
 	if err != nil {
 		return nil, err
 	}
 	newCodeRun.Status = coderun.StatusCompleted
-	return s.codeRun.Update(ctx, newCodeRun.ID.Hex(), newCodeRun)
+	return s.codeRun.Update(ctx, newCodeRun.ID, newCodeRun)
 }
 
 var environment = ""
@@ -155,6 +153,10 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 			cmd = exec.Command("python", tempDir+"/main.py", idRunArg, idCodeArg, headerArg)
 		}
 	}
+	
+	// Pass environment variables to Python process
+	cmd.Env = os.Environ()
+	
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout

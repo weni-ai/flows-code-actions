@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/weni-ai/flows-code-actions/config"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CodeRunStatus string
@@ -21,12 +20,14 @@ const (
 )
 
 type CodeRun struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	ID            string `json:"id,omitempty"`                              // PostgreSQL UUID (primary key)
+	MongoObjectID string `json:"mongo_object_id,omitempty" bson:"_id,omitempty"` // MongoDB ObjectID for backward compatibility
 
-	CodeID primitive.ObjectID     `bson:"code_id" json:"code_id"`
-	Status CodeRunStatus          `bson:"status" json:"status"`
-	Result string                 `bson:"result" json:"result"`
-	Extra  map[string]interface{} `bson:"extra" json:"extra"`
+	CodeID        string                 `bson:"code_id" json:"code_id"`           // PostgreSQL UUID or MongoDB ObjectID
+	CodeMongoID   string                 `json:"code_mongo_id,omitempty"`          // MongoDB ObjectID of the code
+	Status        CodeRunStatus          `bson:"status" json:"status"`
+	Result        string                 `bson:"result" json:"result"`
+	Extra         map[string]interface{} `bson:"extra" json:"extra"`
 
 	Params  map[string]interface{} `bson:"params" json:"params"`
 	Body    string                 `bson:"body" json:"body"`
@@ -46,8 +47,7 @@ type UseCase interface {
 }
 
 func NewCodeRun(codeID string, status CodeRunStatus) *CodeRun {
-	cID, _ := primitive.ObjectIDFromHex(codeID)
-	return &CodeRun{CodeID: cID, Status: status}
+	return &CodeRun{CodeID: codeID, Status: status}
 }
 
 func (c *CodeRun) StatusCode() (int, error) {

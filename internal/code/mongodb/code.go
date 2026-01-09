@@ -28,7 +28,10 @@ func (r *codeRepo) Create(ctx context.Context, code *code.Code) (*code.Code, err
 	if err != nil {
 		return nil, err
 	}
-	code.ID = result.InsertedID.(primitive.ObjectID)
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		code.ID = oid.Hex()
+		code.MongoObjectID = oid.Hex()
+	}
 	return code, nil
 }
 

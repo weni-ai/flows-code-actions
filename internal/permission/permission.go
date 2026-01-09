@@ -3,8 +3,6 @@ package permission
 import (
 	"context"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Role int
@@ -23,10 +21,11 @@ const (
 )
 
 type UserPermission struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	ProjectUUID string             `bson:"project_uuid,omitempty" json:"project_uuid,omitempty"`
-	Email       string             `bson:"email" json:"email,omitempty"`
-	Role        Role               `bson:"role" json:"role,omitempty"`
+	ID            string `json:"id,omitempty"`                              // PostgreSQL UUID (primary key)
+	MongoObjectID string `json:"mongo_object_id,omitempty" bson:"_id,omitempty"` // MongoDB ObjectID for backward compatibility
+	ProjectUUID   string `bson:"project_uuid,omitempty" json:"project_uuid,omitempty"`
+	Email         string `bson:"email" json:"email,omitempty"`
+	Role          Role   `bson:"role" json:"role,omitempty"`
 
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`

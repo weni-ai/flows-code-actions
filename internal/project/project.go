@@ -3,14 +3,13 @@ package project
 import (
 	"context"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Project struct {
-	ID             primitive.ObjectID `json:"_id,omitempty" bson:"id,omitempty"`
-	UUID           string             `json:"uuid"`
-	Name           string             `json:"name"`
+	ID            string `json:"id,omitempty"`                              // PostgreSQL UUID (primary key)
+	MongoObjectID string `json:"mongo_object_id,omitempty" bson:"_id,omitempty"` // MongoDB ObjectID for backward compatibility
+	UUID          string `json:"uuid"`
+	Name          string `json:"name"`
 	Authorizations []struct {
 		UserEmail string `json:"user_email"`
 		Role      string `json:"role"`

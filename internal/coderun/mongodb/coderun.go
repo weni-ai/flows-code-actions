@@ -29,7 +29,10 @@ func (r *codeRunRepo) Create(ctx context.Context, coderun *coderun.CodeRun) (*co
 	if err != nil {
 		return nil, err
 	}
-	coderun.ID = result.InsertedID.(primitive.ObjectID)
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		coderun.ID = oid.Hex()
+		coderun.MongoObjectID = oid.Hex()
+	}
 	return coderun, err
 }
 
@@ -131,7 +134,11 @@ func (r *codeRunRepo) DeleteOlder(ctx context.Context, date time.Time, limit int
 	if len(runs) > 0 {
 		ids := make([]primitive.ObjectID, len(runs))
 		for i, run := range runs {
-			ids[i] = run.ID
+			oid, err := primitive.ObjectIDFromHex(run.ID)
+			if err != nil {
+				continue
+			}
+			ids[i] = oid
 		}
 		res, err := r.collection.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
 		if err != nil {

@@ -26,3 +26,8 @@ __pycache__
 
 __debug*
 .qodo
+
+venv/
+env/
+.vscode/
+launch.json

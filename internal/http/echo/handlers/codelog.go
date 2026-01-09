@@ -67,7 +67,7 @@ func (h *CodeLogHandler) Find(c echo.Context) error {
 			log.WithError(err).Error(err.Error())
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
-		codeID = codeRun.CodeID.Hex()
+		codeID = codeRun.CodeID
 	}
 
 	if qpage == "" {
