@@ -30,6 +30,11 @@ CREATE INDEX IF NOT EXISTS idx_coderuns_code_id_created_at ON coderuns(code_id, 
 CREATE INDEX IF NOT EXISTS idx_coderuns_extra ON coderuns USING GIN (extra);
 CREATE INDEX IF NOT EXISTS idx_coderuns_params ON coderuns USING GIN (params);
 
+-- Expression indexes for text-casted UUID lookups (critical for performance)
+-- These enable efficient lookups when queries use id::text or code_id::text
+CREATE INDEX IF NOT EXISTS idx_coderuns_id_text ON coderuns((id::text));
+CREATE INDEX IF NOT EXISTS idx_coderuns_code_id_text ON coderuns((code_id::text));
+
 -- Add comments for documentation
 COMMENT ON TABLE coderuns IS 'Stores code execution runs with their parameters and results';
 COMMENT ON COLUMN coderuns.id IS 'Primary key (PostgreSQL native UUID)';
