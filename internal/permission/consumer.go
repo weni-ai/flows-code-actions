@@ -2,6 +2,7 @@ package permission
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -41,6 +42,11 @@ func NewPermissionConsumer(permissionService UserPermissionUseCase, exchange, qu
 	return c
 }
 
+// isNotFoundError checks if an error is a "not found" error from either MongoDB or PostgreSQL
+func isNotFoundError(err error) bool {
+	return errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, sql.ErrNoRows)
+}
+
 func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error {
 	var evt eventdriven.PermissionEvent
 	err := json.Unmarshal(eventMsg, &evt)
@@ -60,31 +66,31 @@ func (c *PermissionConsumer) Handle(ctx context.Context, eventMsg []byte) error 
 		}
 	case "update":
 		finded, err := c.permissionService.Find(ctx, userPerm)
-		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		if err != nil && !isNotFoundError(err) {
 			return err
 		}
-	if finded == nil || finded.ProjectUUID != evt.Project {
-		if _, err := c.permissionService.Create(ctx, userPerm); err != nil {
-			return err
+		if finded == nil || finded.ProjectUUID != evt.Project {
+			if _, err := c.permissionService.Create(ctx, userPerm); err != nil {
+				return err
+			}
+		} else {
+			if _, err := c.permissionService.Update(ctx, finded.ID, userPerm); err != nil {
+				return err
+			}
 		}
-	} else {
-		if _, err := c.permissionService.Update(ctx, finded.ID, userPerm); err != nil {
-			return err
-		}
-	}
 	case "delete":
 		finded, err := c.permissionService.Find(ctx, userPerm)
 		if err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
+			if isNotFoundError(err) {
 				return nil
 			}
 			return err
 		}
-	if finded.ProjectUUID == evt.Project {
-		if err := c.permissionService.Delete(ctx, finded.ID); err != nil {
-			return err
+		if finded.ProjectUUID == evt.Project {
+			if err := c.permissionService.Delete(ctx, finded.ID); err != nil {
+				return err
+			}
 		}
-	}
 		return nil
 	default:
 		return errors.Wrapf(rabbitmq.ErrInvalidMsg, "action: %s, for event: %s", evt.Action, eventMsg)
