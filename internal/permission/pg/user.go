@@ -111,7 +111,7 @@ func (r *userRepo) Update(ctx context.Context, userID string, user *permission.U
 	query := `
 		UPDATE user_permissions
 		SET mongo_object_id = $2, project_uuid = $3, email = $4, role = $5, updated_at = $6
-		WHERE id::text = $1 OR mongo_object_id = $1
+		WHERE id::uuid = $1 OR mongo_object_id = $1
 		RETURNING id`
 
 	user.UpdatedAt = time.Now()
@@ -138,7 +138,7 @@ func (r *userRepo) Update(ctx context.Context, userID string, user *permission.U
 }
 
 func (r *userRepo) Delete(ctx context.Context, userID string) error {
-	query := `DELETE FROM user_permissions WHERE id::text = $1 OR mongo_object_id = $1`
+	query := `DELETE FROM user_permissions WHERE id::uuid = $1 OR mongo_object_id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, userID)
 	if err != nil {

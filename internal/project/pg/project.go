@@ -107,7 +107,7 @@ func (r *repo) Update(ctx context.Context, proj *project.Project) (*project.Proj
 	query := `
 		UPDATE projects
 		SET mongo_object_id = $2, name = $3, updated_at = $4
-		WHERE id::text = $1 OR mongo_object_id = $1 OR uuid = $1
+		WHERE id::uuid = $1 OR mongo_object_id = $1 OR uuid = $1
 		RETURNING id`
 
 	proj.UpdatedAt = time.Now()

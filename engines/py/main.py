@@ -177,14 +177,14 @@ class Result:
             extra_json = json.dumps(self._extra) if self._extra else None
             
             # Update coderuns table in PostgreSQL
-            # Using id::text to handle UUID comparison properly
+            # Using id::uuid to handle UUID comparison properly
             cursor.execute(
                 """
                 UPDATE coderuns 
                 SET result = %s, 
                     extra = %s::jsonb, 
                     updated_at = NOW()
-                WHERE id::text = %s
+                WHERE id::uuid = %s
                 """,
                 (self._result, extra_json, self._runId)
             )
