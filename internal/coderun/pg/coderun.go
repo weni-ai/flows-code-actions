@@ -10,6 +10,7 @@ import (
 	"github.com/weni-ai/flows-code-actions/internal/coderun"
 
 	_ "github.com/lib/pq"
+	"github.com/weni-ai/flows-code-actions/internal/util"
 )
 
 type codeRunRepo struct {
@@ -26,7 +27,7 @@ func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun
 	cr.UpdatedAt = time.Now()
 
 	codeUUID := cr.CodeID
-	if cr.CodeID != "" && !isUUID(cr.CodeID) {
+	if cr.CodeID != "" && !util.IsUUID(cr.CodeID) {
 		var foundUUID sql.NullString
 		lookupQuery := `SELECT id FROM codes WHERE mongo_object_id = $1`
 		err := r.db.QueryRowContext(ctx, lookupQuery, cr.CodeID).Scan(&foundUUID)
@@ -88,11 +89,16 @@ func (r *codeRunRepo) Create(ctx context.Context, cr *coderun.CodeRun) (*coderun
 }
 
 func (r *codeRunRepo) GetByID(ctx context.Context, id string) (*coderun.CodeRun, error) {
-	// Try to find by UUID first, then by mongo_object_id
 	query := `
 		SELECT id, mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at
 		FROM coderuns
-		WHERE id::text = $1 OR mongo_object_id = $1`
+		WHERE `
+
+	if util.IsUUID(id) {
+		query += "id = $1"
+	} else {
+		query += "mongo_object_id = $1"
+	}
 
 	cr := &coderun.CodeRun{}
 	var mongoObjectID, codeID, codeMongoID sql.NullString
@@ -152,7 +158,13 @@ func (r *codeRunRepo) ListByCodeID(ctx context.Context, codeID string, filter ma
 	query := `
 		SELECT id, mongo_object_id, code_id, code_mongo_id, status, result, extra, params, body, headers, created_at, updated_at
 		FROM coderuns
-		WHERE (code_id::text = $1 OR code_mongo_id = $1)`
+		WHERE `
+
+	if util.IsUUID(codeID) {
+		query += "code_id = $1"
+	} else {
+		query += "code_mongo_id = $1"
+	}
 
 	args := []interface{}{codeID}
 	argIndex := 2
@@ -243,7 +255,7 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 	cr.UpdatedAt = time.Now()
 
 	codeUUID := cr.CodeID
-	if cr.CodeID != "" && !isUUID(cr.CodeID) {
+	if cr.CodeID != "" && !util.IsUUID(cr.CodeID) {
 		var foundUUID sql.NullString
 		lookupQuery := `SELECT id FROM codes WHERE mongo_object_id = $1`
 		err := r.db.QueryRowContext(ctx, lookupQuery, cr.CodeID).Scan(&foundUUID)
@@ -264,8 +276,15 @@ func (r *codeRunRepo) Update(ctx context.Context, id string, cr *coderun.CodeRun
 		UPDATE coderuns
 		SET mongo_object_id = $2, code_id = NULLIF($3, '')::uuid, code_mongo_id = $4, status = $5, result = $6, 
 		    extra = $7, params = $8, body = $9, headers = $10, updated_at = $11
-		WHERE id::text = $1 OR mongo_object_id = $1
-		RETURNING id`
+		WHERE `
+
+	if util.IsUUID(id) {
+		query += "id = $1"
+	} else {
+		query += "mongo_object_id = $1"
+	}
+
+	query += " RETURNING id"
 
 	// Marshal JSON fields
 	extraJSON, err := json.Marshal(cr.Extra)
@@ -335,28 +354,6 @@ func nullString(s string) sql.NullString {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: s, Valid: true}
-}
-
-// isUUID checks if a string is a valid UUID format
-// UUID format: 8-4-4-4-12 hex characters (e.g., 550e8400-e29b-41d4-a716-446655440000)
-func isUUID(s string) bool {
-	if len(s) != 36 {
-		return false
-	}
-	// Check format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	if s[8] != '-' || s[13] != '-' || s[18] != '-' || s[23] != '-' {
-		return false
-	}
-	// Check if all other characters are hex digits
-	for i, c := range s {
-		if i == 8 || i == 13 || i == 18 || i == 23 {
-			continue
-		}
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
 }
 
 func (r *codeRunRepo) DeleteOlder(ctx context.Context, date time.Time, limit int64) (int64, error) {
