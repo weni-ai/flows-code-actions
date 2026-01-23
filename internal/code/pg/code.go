@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/code"
+	"github.com/weni-ai/flows-code-actions/internal/util"
 
 	_ "github.com/lib/pq"
 )
@@ -56,7 +57,13 @@ func (r *codeRepo) GetByID(ctx context.Context, id string) (*code.Code, error) {
 	query := `
 		SELECT id, mongo_object_id, name, type, source, language, url, project_uuid, timeout, created_at, updated_at 
 		FROM codes 
-		WHERE id::text = $1 OR mongo_object_id = $1`
+		WHERE `
+
+	if util.IsUUID(id) {
+		query += "id = $1"
+	} else {
+		query += "mongo_object_id = $1"
+	}
 
 	codeAction := &code.Code{}
 	var mongoObjectID sql.NullString
