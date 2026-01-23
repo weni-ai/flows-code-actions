@@ -184,7 +184,7 @@ class Result:
                 SET result = %s, 
                     extra = %s::jsonb, 
                     updated_at = NOW()
-                WHERE id::text = %s
+                WHERE id = %s
                 """,
                 (self._result, extra_json, self._runId)
             )
