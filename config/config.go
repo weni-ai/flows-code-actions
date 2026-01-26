@@ -23,6 +23,7 @@ type Config struct {
 	Blacklist          string
 	Skiplist           string
 	S3                 S3Config
+	WorkerPool         WorkerPoolConfig
 
 	HealthCheckCacheTime int64
 }
@@ -35,6 +36,11 @@ type RateLimiterConfig struct {
 type CleanerConfig struct {
 	ScheduleTime    string
 	RetentionPeriod string
+}
+
+type WorkerPoolConfig struct {
+	Workers   int
+	QueueSize int
 }
 
 type HTTPConfig struct {
@@ -115,6 +121,7 @@ func NewConfig() *Config {
 		Blacklist:       Getenv("FLOWS_CODE_ACTIONS_BLACKLIST", ""),
 		Skiplist:        Getenv("FLOWS_CODE_ACTIONS_SKIPLIST", ""),
 		S3:              LoadS3Config(),
+		WorkerPool:      LoadWorkerPoolConfig(),
 
 		HealthCheckCacheTime: GetenvInt64("FLOWS_CODE_ACTIONS_HEALTH_CHECK_CACHE_TIME", 3),
 	}
@@ -141,6 +148,23 @@ func NewCleanerConfig() CleanerConfig {
 	return CleanerConfig{
 		ScheduleTime:    scheduleTime,
 		RetentionPeriod: retentionPeriod,
+	}
+}
+
+func LoadWorkerPoolConfig() WorkerPoolConfig {
+	workers, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_WORKER_POOL_SIZE", "4"))
+	if err != nil || workers <= 0 {
+		workers = 4
+	}
+
+	queueSize, err := strconv.Atoi(Getenv("FLOWS_CODE_ACTIONS_WORKER_POOL_QUEUE_SIZE", "100"))
+	if err != nil || queueSize <= 0 {
+		queueSize = 100
+	}
+
+	return WorkerPoolConfig{
+		Workers:   workers,
+		QueueSize: queueSize,
 	}
 }
 

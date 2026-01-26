@@ -9,19 +9,23 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/code"
+	"github.com/weni-ai/flows-code-actions/internal/coderun"
 	"github.com/weni-ai/flows-code-actions/internal/coderunner"
 	"github.com/weni-ai/flows-code-actions/internal/metrics"
+	"github.com/weni-ai/flows-code-actions/internal/workerpool"
 )
 
 type CodeRunnerHandler struct {
 	codeService       code.UseCase
 	coderunnerService coderunner.UseCase
+	workerPool        *workerpool.Pool
 }
 
-func NewCodeRunnerHandler(codeService code.UseCase, coderunnerService coderunner.UseCase) *CodeRunnerHandler {
+func NewCodeRunnerHandler(codeService code.UseCase, coderunnerService coderunner.UseCase, workerPool *workerpool.Pool) *CodeRunnerHandler {
 	return &CodeRunnerHandler{
 		codeService:       codeService,
 		coderunnerService: coderunnerService,
+		workerPool:        workerPool,
 	}
 }
 
@@ -104,32 +108,43 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(codeAction.Timeout))
 	defer cancel()
 
-	res := make(chan error)
+	aheader := map[string]interface{}{}
+	for k, v := range c.Request().Header {
+		aheader[k] = v
+	}
 
-	go func() {
-		aheader := map[string]interface{}{}
-
-		for k, v := range c.Request().Header {
-			aheader[k] = v
-		}
-
-		cparams := map[string]interface{}{}
-
-		for k, v := range c.QueryParams() {
+	cparams := map[string]interface{}{}
+	for k, v := range c.QueryParams() {
+		if len(v) > 0 {
 			cparams[k] = v[0]
 		}
+	}
 
-		abody, err := io.ReadAll(c.Request().Body)
-		if err != nil {
-			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	abody, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	resultCh := make(chan workerpool.Result, 1)
+	task := workerpool.Task{
+		Ctx: ctx,
+		Execute: func(taskCtx context.Context) (*coderun.CodeRun, error) {
+			return h.coderunnerService.RunCode(taskCtx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody), aheader)
+		},
+		Result: resultCh,
+	}
+
+	if err := h.workerPool.Submit(task); err != nil {
+		return echo.NewHTTPError(http.StatusServiceUnavailable, err.Error())
+	}
+
+	select {
+	case res := <-resultCh:
+		if res.Err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, res.Err.Error())
 		}
 
-		result, err := h.coderunnerService.RunCode(ctx, codeID, codeAction.Source, string(codeAction.Language), cparams, string(abody), aheader)
-		if err != nil {
-			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-			return
-		}
-
+		result := res.Run
 		statusCode := http.StatusOK
 		contentType := "string"
 
@@ -157,16 +172,11 @@ func (h *CodeRunnerHandler) ActionEndpoint(c echo.Context) error {
 			resultContent = "Internal Server Error"
 		}
 
-		_, err = c.Response().Write([]byte(resultContent))
-		if err != nil {
-			res <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		if _, err := c.Response().Write([]byte(resultContent)); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		res <- nil
-	}()
 
-	select {
-	case err := <-res:
-		return err
+		return nil
 	case <-ctx.Done():
 		return echo.NewHTTPError(http.StatusRequestTimeout, "timeout: request context timeout limit exceeded")
 	}

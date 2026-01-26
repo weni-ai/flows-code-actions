@@ -26,6 +26,7 @@ import (
 	s "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
+	"github.com/weni-ai/flows-code-actions/internal/workerpool"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
@@ -75,7 +76,8 @@ func Setup(server *s.Server) {
 	server.Services.CodeRunService = coderunService
 
 	coderunnerService := coderunner.NewCodeRunnerService(server.Config, coderunService, codelogService)
-	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService)
+	pool := workerpool.NewPool(server.Config.WorkerPool.Workers, server.Config.WorkerPool.QueueSize)
+	coderunnerHandler := handlers.NewCodeRunnerHandler(codeService, coderunnerService, pool)
 
 	ratelimiter := s.NewRateLimiter(
 		server.Redis,
