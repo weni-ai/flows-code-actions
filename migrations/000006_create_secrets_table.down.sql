@@ -3,7 +3,7 @@
 
 -- Drop indexes first
 DROP INDEX IF EXISTS idx_secrets_created_at;
-DROP INDEX IF EXISTS idx_secrets_code_id;
+DROP INDEX IF EXISTS idx_secrets_project_uuid;
 
 -- Drop table
 DROP TABLE IF EXISTS secrets;

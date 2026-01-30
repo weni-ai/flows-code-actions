@@ -35,14 +35,14 @@ func TestRepoCreate_Success(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &secrets.Secret{
-		Name:   "API_KEY",
-		Value:  "secret-value-123",
-		CodeID: "code-uuid-123",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	rows := sqlmock.NewRows([]string{"id"}).AddRow("generated-uuid-123")
 	mock.ExpectQuery(`INSERT INTO secrets`).
-		WithArgs(secret.Name, secret.Value, secret.CodeID, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(secret.Name, secret.Value, secret.ProjectUUID, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(rows)
 
 	result, err := repo.Create(ctx, secret)
@@ -62,13 +62,13 @@ func TestRepoCreate_Error(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &secrets.Secret{
-		Name:   "API_KEY",
-		Value:  "secret-value-123",
-		CodeID: "code-uuid-123",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	mock.ExpectQuery(`INSERT INTO secrets`).
-		WithArgs(secret.Name, secret.Value, secret.CodeID, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(secret.Name, secret.Value, secret.ProjectUUID, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnError(sql.ErrConnDone)
 
 	result, err := repo.Create(ctx, secret)
@@ -87,10 +87,10 @@ func TestRepoGetByID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "value", "code_id", "created_at", "updated_at"}).
-		AddRow("secret-uuid-123", "API_KEY", "secret-value", "code-uuid-123", now, now)
+	rows := sqlmock.NewRows([]string{"id", "name", "value", "project_uuid", "created_at", "updated_at"}).
+		AddRow("secret-uuid-123", "API_KEY", "secret-value", "project-uuid-123", now, now)
 
-	mock.ExpectQuery(`SELECT id, name, value, code_id, created_at, updated_at FROM secrets WHERE id = \$1`).
+	mock.ExpectQuery(`SELECT id, name, value, project_uuid, created_at, updated_at FROM secrets WHERE id = \$1`).
 		WithArgs("secret-uuid-123").
 		WillReturnRows(rows)
 
@@ -101,6 +101,7 @@ func TestRepoGetByID_Success(t *testing.T) {
 	assert.Equal(t, "secret-uuid-123", result.ID)
 	assert.Equal(t, "API_KEY", result.Name)
 	assert.Equal(t, "secret-value", result.Value)
+	assert.Equal(t, "project-uuid-123", result.ProjectUUID)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -111,7 +112,7 @@ func TestRepoGetByID_NotFound(t *testing.T) {
 	repo := NewSecretRepository(db)
 	ctx := context.Background()
 
-	mock.ExpectQuery(`SELECT id, name, value, code_id, created_at, updated_at FROM secrets WHERE id = \$1`).
+	mock.ExpectQuery(`SELECT id, name, value, project_uuid, created_at, updated_at FROM secrets WHERE id = \$1`).
 		WithArgs("non-existent-id").
 		WillReturnError(sql.ErrNoRows)
 
@@ -123,7 +124,7 @@ func TestRepoGetByID_NotFound(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestRepoGetByCodeID_Success(t *testing.T) {
+func TestRepoGetByProjectUUID_Success(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
@@ -131,15 +132,15 @@ func TestRepoGetByCodeID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "value", "code_id", "created_at", "updated_at"}).
-		AddRow("secret-uuid-1", "API_KEY", "value-1", "code-uuid-123", now, now).
-		AddRow("secret-uuid-2", "DB_PASSWORD", "value-2", "code-uuid-123", now, now)
+	rows := sqlmock.NewRows([]string{"id", "name", "value", "project_uuid", "created_at", "updated_at"}).
+		AddRow("secret-uuid-1", "API_KEY", "value-1", "project-uuid-123", now, now).
+		AddRow("secret-uuid-2", "DB_PASSWORD", "value-2", "project-uuid-123", now, now)
 
-	mock.ExpectQuery(`SELECT id, name, value, code_id, created_at, updated_at FROM secrets WHERE code_id = \$1 ORDER BY created_at DESC`).
-		WithArgs("code-uuid-123").
+	mock.ExpectQuery(`SELECT id, name, value, project_uuid, created_at, updated_at FROM secrets WHERE project_uuid = \$1 ORDER BY created_at DESC`).
+		WithArgs("project-uuid-123").
 		WillReturnRows(rows)
 
-	result, err := repo.GetByCodeID(ctx, "code-uuid-123")
+	result, err := repo.GetByProjectUUID(ctx, "project-uuid-123")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -149,20 +150,20 @@ func TestRepoGetByCodeID_Success(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestRepoGetByCodeID_Empty(t *testing.T) {
+func TestRepoGetByProjectUUID_Empty(t *testing.T) {
 	db, mock := setupMockDB(t)
 	defer db.Close()
 
 	repo := NewSecretRepository(db)
 	ctx := context.Background()
 
-	rows := sqlmock.NewRows([]string{"id", "name", "value", "code_id", "created_at", "updated_at"})
+	rows := sqlmock.NewRows([]string{"id", "name", "value", "project_uuid", "created_at", "updated_at"})
 
-	mock.ExpectQuery(`SELECT id, name, value, code_id, created_at, updated_at FROM secrets WHERE code_id = \$1 ORDER BY created_at DESC`).
-		WithArgs("code-uuid-123").
+	mock.ExpectQuery(`SELECT id, name, value, project_uuid, created_at, updated_at FROM secrets WHERE project_uuid = \$1 ORDER BY created_at DESC`).
+		WithArgs("project-uuid-123").
 		WillReturnRows(rows)
 
-	result, err := repo.GetByCodeID(ctx, "code-uuid-123")
+	result, err := repo.GetByProjectUUID(ctx, "project-uuid-123")
 
 	assert.NoError(t, err)
 	assert.Nil(t, result) // nil slice when no results
@@ -177,15 +178,15 @@ func TestRepoUpdate_Success(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &secrets.Secret{
-		ID:     "secret-uuid-123",
-		Name:   "NEW_API_KEY",
-		Value:  "new-value",
-		CodeID: "code-uuid-123",
+		ID:          "secret-uuid-123",
+		Name:        "NEW_API_KEY",
+		Value:       "new-value",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	rows := sqlmock.NewRows([]string{"id"}).AddRow("secret-uuid-123")
-	mock.ExpectQuery(`UPDATE secrets SET name = \$2, value = \$3, code_id = \$4, updated_at = \$5 WHERE id = \$1 RETURNING id`).
-		WithArgs("secret-uuid-123", secret.Name, secret.Value, secret.CodeID, sqlmock.AnyArg()).
+	mock.ExpectQuery(`UPDATE secrets SET name = \$2, value = \$3, project_uuid = \$4, updated_at = \$5 WHERE id = \$1 RETURNING id`).
+		WithArgs("secret-uuid-123", secret.Name, secret.Value, secret.ProjectUUID, sqlmock.AnyArg()).
 		WillReturnRows(rows)
 
 	result, err := repo.Update(ctx, "secret-uuid-123", secret)
@@ -204,14 +205,14 @@ func TestRepoUpdate_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &secrets.Secret{
-		ID:     "non-existent-id",
-		Name:   "NEW_API_KEY",
-		Value:  "new-value",
-		CodeID: "code-uuid-123",
+		ID:          "non-existent-id",
+		Name:        "NEW_API_KEY",
+		Value:       "new-value",
+		ProjectUUID: "project-uuid-123",
 	}
 
-	mock.ExpectQuery(`UPDATE secrets SET name = \$2, value = \$3, code_id = \$4, updated_at = \$5 WHERE id = \$1 RETURNING id`).
-		WithArgs("non-existent-id", secret.Name, secret.Value, secret.CodeID, sqlmock.AnyArg()).
+	mock.ExpectQuery(`UPDATE secrets SET name = \$2, value = \$3, project_uuid = \$4, updated_at = \$5 WHERE id = \$1 RETURNING id`).
+		WithArgs("non-existent-id", secret.Name, secret.Value, secret.ProjectUUID, sqlmock.AnyArg()).
 		WillReturnError(sql.ErrNoRows)
 
 	result, err := repo.Update(ctx, "non-existent-id", secret)

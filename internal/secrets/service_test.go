@@ -31,8 +31,8 @@ func (m *MockRepository) GetByID(ctx context.Context, id string) (*Secret, error
 	return args.Get(0).(*Secret), args.Error(1)
 }
 
-func (m *MockRepository) GetByCodeID(ctx context.Context, codeID string) ([]Secret, error) {
-	args := m.Called(ctx, codeID)
+func (m *MockRepository) GetByProjectUUID(ctx context.Context, projectUUID string) ([]Secret, error) {
+	args := m.Called(ctx, projectUUID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -65,18 +65,18 @@ func TestServiceCreate_Success(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &Secret{
-		Name:   "API_KEY",
-		Value:  "secret-value-123",
-		CodeID: "code-uuid-123",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	expectedSecret := &Secret{
-		ID:        "secret-uuid-123",
-		Name:      "API_KEY",
-		Value:     "secret-value-123",
-		CodeID:    "code-uuid-123",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:          "secret-uuid-123",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	mockRepo.On("Create", ctx, secret).Return(expectedSecret, nil)
@@ -96,9 +96,9 @@ func TestServiceCreate_EmptyName(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &Secret{
-		Name:   "",
-		Value:  "secret-value-123",
-		CodeID: "code-uuid-123",
+		Name:        "",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	result, err := service.Create(ctx, secret)
@@ -115,9 +115,9 @@ func TestServiceCreate_EmptyValue(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &Secret{
-		Name:   "API_KEY",
-		Value:  "",
-		CodeID: "code-uuid-123",
+		Name:        "API_KEY",
+		Value:       "",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	result, err := service.Create(ctx, secret)
@@ -128,22 +128,22 @@ func TestServiceCreate_EmptyValue(t *testing.T) {
 	mockRepo.AssertNotCalled(t, "Create")
 }
 
-func TestServiceCreate_EmptyCodeID(t *testing.T) {
+func TestServiceCreate_EmptyProjectUUID(t *testing.T) {
 	mockRepo := new(MockRepository)
 	service := NewSecretService(mockRepo)
 	ctx := context.Background()
 
 	secret := &Secret{
-		Name:   "API_KEY",
-		Value:  "secret-value-123",
-		CodeID: "",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "",
 	}
 
 	result, err := service.Create(ctx, secret)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "code_id is required", err.Error())
+	assert.Equal(t, "project_uuid is required", err.Error())
 	mockRepo.AssertNotCalled(t, "Create")
 }
 
@@ -153,9 +153,9 @@ func TestServiceCreate_RepositoryError(t *testing.T) {
 	ctx := context.Background()
 
 	secret := &Secret{
-		Name:   "API_KEY",
-		Value:  "secret-value-123",
-		CodeID: "code-uuid-123",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
 	}
 
 	mockRepo.On("Create", ctx, secret).Return(nil, errors.New("database error"))
@@ -174,12 +174,12 @@ func TestServiceGetByID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	expectedSecret := &Secret{
-		ID:        "secret-uuid-123",
-		Name:      "API_KEY",
-		Value:     "secret-value-123",
-		CodeID:    "code-uuid-123",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:          "secret-uuid-123",
+		Name:        "API_KEY",
+		Value:       "secret-value-123",
+		ProjectUUID: "project-uuid-123",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	mockRepo.On("GetByID", ctx, "secret-uuid-123").Return(expectedSecret, nil)
@@ -207,29 +207,29 @@ func TestServiceGetByID_NotFound(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestServiceGetByCodeID_Success(t *testing.T) {
+func TestServiceGetByProjectUUID_Success(t *testing.T) {
 	mockRepo := new(MockRepository)
 	service := NewSecretService(mockRepo)
 	ctx := context.Background()
 
 	expectedSecrets := []Secret{
 		{
-			ID:     "secret-uuid-1",
-			Name:   "API_KEY",
-			Value:  "value-1",
-			CodeID: "code-uuid-123",
+			ID:          "secret-uuid-1",
+			Name:        "API_KEY",
+			Value:       "value-1",
+			ProjectUUID: "project-uuid-123",
 		},
 		{
-			ID:     "secret-uuid-2",
-			Name:   "DB_PASSWORD",
-			Value:  "value-2",
-			CodeID: "code-uuid-123",
+			ID:          "secret-uuid-2",
+			Name:        "DB_PASSWORD",
+			Value:       "value-2",
+			ProjectUUID: "project-uuid-123",
 		},
 	}
 
-	mockRepo.On("GetByCodeID", ctx, "code-uuid-123").Return(expectedSecrets, nil)
+	mockRepo.On("GetByProjectUUID", ctx, "project-uuid-123").Return(expectedSecrets, nil)
 
-	result, err := service.GetByCodeID(ctx, "code-uuid-123")
+	result, err := service.GetByProjectUUID(ctx, "project-uuid-123")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -239,14 +239,14 @@ func TestServiceGetByCodeID_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestServiceGetByCodeID_Empty(t *testing.T) {
+func TestServiceGetByProjectUUID_Empty(t *testing.T) {
 	mockRepo := new(MockRepository)
 	service := NewSecretService(mockRepo)
 	ctx := context.Background()
 
-	mockRepo.On("GetByCodeID", ctx, "code-uuid-123").Return([]Secret{}, nil)
+	mockRepo.On("GetByProjectUUID", ctx, "project-uuid-123").Return([]Secret{}, nil)
 
-	result, err := service.GetByCodeID(ctx, "code-uuid-123")
+	result, err := service.GetByProjectUUID(ctx, "project-uuid-123")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -260,21 +260,21 @@ func TestServiceUpdate_Success(t *testing.T) {
 	ctx := context.Background()
 
 	existingSecret := &Secret{
-		ID:        "secret-uuid-123",
-		Name:      "API_KEY",
-		Value:     "old-value",
-		CodeID:    "code-uuid-123",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:          "secret-uuid-123",
+		Name:        "API_KEY",
+		Value:       "old-value",
+		ProjectUUID: "project-uuid-123",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	updatedSecret := &Secret{
-		ID:        "secret-uuid-123",
-		Name:      "NEW_API_KEY",
-		Value:     "new-value",
-		CodeID:    "code-uuid-123",
-		CreatedAt: existingSecret.CreatedAt,
-		UpdatedAt: time.Now(),
+		ID:          "secret-uuid-123",
+		Name:        "NEW_API_KEY",
+		Value:       "new-value",
+		ProjectUUID: "project-uuid-123",
+		CreatedAt:   existingSecret.CreatedAt,
+		UpdatedAt:   time.Now(),
 	}
 
 	mockRepo.On("GetByID", ctx, "secret-uuid-123").Return(existingSecret, nil)
@@ -295,12 +295,12 @@ func TestServiceUpdate_OnlyName(t *testing.T) {
 	ctx := context.Background()
 
 	existingSecret := &Secret{
-		ID:        "secret-uuid-123",
-		Name:      "API_KEY",
-		Value:     "old-value",
-		CodeID:    "code-uuid-123",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:          "secret-uuid-123",
+		Name:        "API_KEY",
+		Value:       "old-value",
+		ProjectUUID: "project-uuid-123",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	mockRepo.On("GetByID", ctx, "secret-uuid-123").Return(existingSecret, nil)
@@ -319,12 +319,12 @@ func TestServiceUpdate_OnlyValue(t *testing.T) {
 	ctx := context.Background()
 
 	existingSecret := &Secret{
-		ID:        "secret-uuid-123",
-		Name:      "API_KEY",
-		Value:     "old-value",
-		CodeID:    "code-uuid-123",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:          "secret-uuid-123",
+		Name:        "API_KEY",
+		Value:       "old-value",
+		ProjectUUID: "project-uuid-123",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	mockRepo.On("GetByID", ctx, "secret-uuid-123").Return(existingSecret, nil)
@@ -380,11 +380,11 @@ func TestServiceDelete_NotFound(t *testing.T) {
 }
 
 func TestNewSecret(t *testing.T) {
-	secret := NewSecret("API_KEY", "secret-value", "code-uuid-123")
+	secret := NewSecret("API_KEY", "secret-value", "project-uuid-123")
 
 	assert.NotNil(t, secret)
 	assert.Equal(t, "API_KEY", secret.Name)
 	assert.Equal(t, "secret-value", secret.Value)
-	assert.Equal(t, "code-uuid-123", secret.CodeID)
+	assert.Equal(t, "project-uuid-123", secret.ProjectUUID)
 	assert.Empty(t, secret.ID)
 }
