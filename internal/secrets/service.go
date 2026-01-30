@@ -21,8 +21,8 @@ func (s *Service) Create(ctx context.Context, secret *Secret) (*Secret, error) {
 	if secret.Value == "" {
 		return nil, errors.New("secret value is required")
 	}
-	if secret.CodeID == "" {
-		return nil, errors.New("code_id is required")
+	if secret.ProjectUUID == "" {
+		return nil, errors.New("project_uuid is required")
 	}
 
 	return s.repo.Create(ctx, secret)
@@ -32,8 +32,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Secret, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) GetByCodeID(ctx context.Context, codeID string) ([]Secret, error) {
-	return s.repo.GetByCodeID(ctx, codeID)
+func (s *Service) GetByProjectUUID(ctx context.Context, projectUUID string) ([]Secret, error) {
+	return s.repo.GetByProjectUUID(ctx, projectUUID)
 }
 
 func (s *Service) Update(ctx context.Context, id string, name string, value string) (*Secret, error) {

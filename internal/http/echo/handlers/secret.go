@@ -8,19 +8,17 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/weni-ai/flows-code-actions/internal/code"
 	"github.com/weni-ai/flows-code-actions/internal/secrets"
 )
 
 type SecretHandler struct {
 	secretService secrets.UseCase
-	codeService   code.UseCase
 }
 
 type CreateSecretRequest struct {
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-	CodeID string `json:"code_id"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+	ProjectUUID string `json:"project_uuid"`
 }
 
 type UpdateSecretRequest struct {
@@ -29,10 +27,10 @@ type UpdateSecretRequest struct {
 }
 
 type SecretResponse struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-	CodeID string `json:"code_id"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+	ProjectUUID string `json:"project_uuid"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -40,19 +38,18 @@ type SecretResponse struct {
 
 func ParseSecretToResponse(secret *secrets.Secret) SecretResponse {
 	return SecretResponse{
-		ID:        secret.ID,
-		Name:      secret.Name,
-		Value:     secret.Value,
-		CodeID:    secret.CodeID,
-		CreatedAt: secret.CreatedAt,
-		UpdatedAt: secret.UpdatedAt,
+		ID:          secret.ID,
+		Name:        secret.Name,
+		Value:       secret.Value,
+		ProjectUUID: secret.ProjectUUID,
+		CreatedAt:   secret.CreatedAt,
+		UpdatedAt:   secret.UpdatedAt,
 	}
 }
 
-func NewSecretHandler(secretService secrets.UseCase, codeService code.UseCase) *SecretHandler {
+func NewSecretHandler(secretService secrets.UseCase) *SecretHandler {
 	return &SecretHandler{
 		secretService: secretService,
-		codeService:   codeService,
 	}
 }
 
@@ -79,24 +76,17 @@ func (h *SecretHandler) CreateSecret(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	if req.CodeID == "" {
-		err := errors.New("code_id is required")
+	if req.ProjectUUID == "" {
+		err := errors.New("project_uuid is required")
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	// Check if code exists and get its project for permission check
-	codeAction, err := h.codeService.GetByID(ctx, req.CodeID)
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "code not found")
-	}
-
-	if err := CheckPermission(ctx, c, codeAction.ProjectUUID); err != nil {
+	if err := CheckPermission(ctx, c, req.ProjectUUID); err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 
-	secret := secrets.NewSecret(req.Name, req.Value, req.CodeID)
+	secret := secrets.NewSecret(req.Name, req.Value, req.ProjectUUID)
 	newSecret, err := h.secretService.Create(ctx, secret)
 	if err != nil {
 		log.WithError(err).Error(err.Error())
@@ -123,24 +113,17 @@ func (h *SecretHandler) GetSecret(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
-	// Get code to check permission
-	codeAction, err := h.codeService.GetByID(ctx, secret.CodeID)
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "associated code not found")
-	}
-
-	if err := CheckPermission(ctx, c, codeAction.ProjectUUID); err != nil {
+	if err := CheckPermission(ctx, c, secret.ProjectUUID); err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, ParseSecretToResponse(secret))
 }
 
-func (h *SecretHandler) FindSecretsByCodeID(c echo.Context) error {
-	codeID := c.QueryParam("code_id")
-	if codeID == "" {
-		err := errors.New("valid code_id is required")
+func (h *SecretHandler) FindSecretsByProjectUUID(c echo.Context) error {
+	projectUUID := c.QueryParam("project_uuid")
+	if projectUUID == "" {
+		err := errors.New("valid project_uuid is required")
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -148,18 +131,11 @@ func (h *SecretHandler) FindSecretsByCodeID(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Get code to check permission
-	codeAction, err := h.codeService.GetByID(ctx, codeID)
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "code not found")
-	}
-
-	if err := CheckPermission(ctx, c, codeAction.ProjectUUID); err != nil {
+	if err := CheckPermission(ctx, c, projectUUID); err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 
-	secretList, err := h.secretService.GetByCodeID(ctx, codeID)
+	secretList, err := h.secretService.GetByProjectUUID(ctx, projectUUID)
 	if err != nil {
 		log.WithError(err).Error(err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -191,14 +167,7 @@ func (h *SecretHandler) UpdateSecret(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
-	// Get code to check permission
-	codeAction, err := h.codeService.GetByID(ctx, existingSecret.CodeID)
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "associated code not found")
-	}
-
-	if err := CheckPermission(ctx, c, codeAction.ProjectUUID); err != nil {
+	if err := CheckPermission(ctx, c, existingSecret.ProjectUUID); err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 
@@ -236,14 +205,7 @@ func (h *SecretHandler) DeleteSecret(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
-	// Get code to check permission
-	codeAction, err := h.codeService.GetByID(ctx, existingSecret.CodeID)
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "associated code not found")
-	}
-
-	if err := CheckPermission(ctx, c, codeAction.ProjectUUID); err != nil {
+	if err := CheckPermission(ctx, c, existingSecret.ProjectUUID); err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 

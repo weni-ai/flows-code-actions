@@ -3,12 +3,12 @@ package secrets
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/weni-ai/flows-code-actions/internal/secrets"
-
-	_ "github.com/lib/pq"
 )
 
 type secretRepo struct {
@@ -22,7 +22,7 @@ func NewSecretRepository(db *sql.DB) secrets.Repository {
 
 func (r *secretRepo) Create(ctx context.Context, secret *secrets.Secret) (*secrets.Secret, error) {
 	query := `
-		INSERT INTO secrets (name, value, code_id, created_at, updated_at) 
+		INSERT INTO secrets (name, value, project_uuid, created_at, updated_at) 
 		VALUES ($1, $2, $3, $4, $5) 
 		RETURNING id`
 
@@ -33,12 +33,20 @@ func (r *secretRepo) Create(ctx context.Context, secret *secrets.Secret) (*secre
 	err := r.db.QueryRowContext(ctx, query,
 		secret.Name,
 		secret.Value,
-		secret.CodeID,
+		secret.ProjectUUID,
 		secret.CreatedAt,
 		secret.UpdatedAt,
 	).Scan(&id)
 
 	if err != nil {
+		// Check for unique constraint violation
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == "23505" { // unique_violation
+				if strings.Contains(pqErr.Constraint, "uq_secrets_project_name") {
+					return nil, errors.Errorf("secret with name '%s' already exists in this project", secret.Name)
+				}
+			}
+		}
 		return nil, errors.Wrap(err, "error creating secret")
 	}
 
@@ -48,7 +56,7 @@ func (r *secretRepo) Create(ctx context.Context, secret *secrets.Secret) (*secre
 
 func (r *secretRepo) GetByID(ctx context.Context, id string) (*secrets.Secret, error) {
 	query := `
-		SELECT id, name, value, code_id, created_at, updated_at 
+		SELECT id, name, value, project_uuid, created_at, updated_at 
 		FROM secrets 
 		WHERE id = $1`
 
@@ -58,7 +66,7 @@ func (r *secretRepo) GetByID(ctx context.Context, id string) (*secrets.Secret, e
 		&secret.ID,
 		&secret.Name,
 		&secret.Value,
-		&secret.CodeID,
+		&secret.ProjectUUID,
 		&secret.CreatedAt,
 		&secret.UpdatedAt,
 	)
@@ -73,16 +81,16 @@ func (r *secretRepo) GetByID(ctx context.Context, id string) (*secrets.Secret, e
 	return secret, nil
 }
 
-func (r *secretRepo) GetByCodeID(ctx context.Context, codeID string) ([]secrets.Secret, error) {
+func (r *secretRepo) GetByProjectUUID(ctx context.Context, projectUUID string) ([]secrets.Secret, error) {
 	query := `
-		SELECT id, name, value, code_id, created_at, updated_at 
+		SELECT id, name, value, project_uuid, created_at, updated_at 
 		FROM secrets 
-		WHERE code_id = $1
+		WHERE project_uuid = $1
 		ORDER BY created_at DESC`
 
-	rows, err := r.db.QueryContext(ctx, query, codeID)
+	rows, err := r.db.QueryContext(ctx, query, projectUUID)
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing secrets by code_id")
+		return nil, errors.Wrap(err, "error listing secrets by project_uuid")
 	}
 	defer rows.Close()
 
@@ -94,7 +102,7 @@ func (r *secretRepo) GetByCodeID(ctx context.Context, codeID string) ([]secrets.
 			&s.ID,
 			&s.Name,
 			&s.Value,
-			&s.CodeID,
+			&s.ProjectUUID,
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		)
@@ -115,7 +123,7 @@ func (r *secretRepo) GetByCodeID(ctx context.Context, codeID string) ([]secrets.
 func (r *secretRepo) Update(ctx context.Context, id string, secret *secrets.Secret) (*secrets.Secret, error) {
 	query := `
 		UPDATE secrets 
-		SET name = $2, value = $3, code_id = $4, updated_at = $5
+		SET name = $2, value = $3, project_uuid = $4, updated_at = $5
 		WHERE id = $1
 		RETURNING id`
 
@@ -126,13 +134,21 @@ func (r *secretRepo) Update(ctx context.Context, id string, secret *secrets.Secr
 		id,
 		secret.Name,
 		secret.Value,
-		secret.CodeID,
+		secret.ProjectUUID,
 		secret.UpdatedAt,
 	).Scan(&returnedID)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("secret not found")
+		}
+		// Check for unique constraint violation (renaming to existing name)
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == "23505" { // unique_violation
+				if strings.Contains(pqErr.Constraint, "uq_secrets_project_name") {
+					return nil, errors.Errorf("secret with name '%s' already exists in this project", secret.Name)
+				}
+			}
 		}
 		return nil, errors.Wrap(err, "error updating secret")
 	}

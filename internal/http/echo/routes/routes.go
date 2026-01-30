@@ -69,7 +69,7 @@ func Setup(server *s.Server) {
 	var secretHandler *handlers.SecretHandler
 	if server.Config.DB.Type == "postgres" && secretsRepo != nil {
 		secretService := secrets.NewSecretService(secretsRepo)
-		secretHandler = handlers.NewSecretHandler(secretService, codeService)
+		secretHandler = handlers.NewSecretHandler(secretService)
 	}
 
 	coderunService := coderun.NewCodeRunService(coderunRepo)
@@ -145,7 +145,7 @@ func Setup(server *s.Server) {
 	// Secret routes (only available when using PostgreSQL)
 	if secretHandler != nil {
 		server.Echo.POST("/secret", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.CreateSecret, permission.WritePermission))
-		server.Echo.GET("/secret", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.FindSecretsByCodeID, permission.ReadPermission))
+		server.Echo.GET("/secret", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.FindSecretsByProjectUUID, permission.ReadPermission))
 		server.Echo.GET("/secret/:id", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.GetSecret, permission.ReadPermission))
 		server.Echo.PATCH("/secret/:id", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.UpdateSecret, permission.WritePermission))
 		server.Echo.DELETE("/secret/:id", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.DeleteSecret, permission.WritePermission))
