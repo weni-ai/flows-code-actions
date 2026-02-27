@@ -270,6 +270,89 @@ class Log:
         """Create an error log entry"""  
         return self._create(logtype="error", content=content)
 
+class Secrets:
+    """Class to access project secrets in a secure way"""
+    def __init__(self, secrets_dict={}):
+        self._secrets = secrets_dict
+    
+    def get(self, key, default=None):
+        """Get a secret value by name"""
+        return self._secrets.get(key, default)
+    
+    def has(self, key):
+        """Check if a secret exists"""
+        return key in self._secrets
+    
+    def keys(self):
+        """Get all secret names (not values)"""
+        return list(self._secrets.keys())
+    
+    def __getitem__(self, key):
+        """Allow dictionary-style access: secrets['API_KEY']"""
+        if key not in self._secrets:
+            raise KeyError(f"Secret '{key}' not found")
+        return self._secrets[key]
+    
+    def __contains__(self, key):
+        """Allow 'in' operator: 'API_KEY' in secrets"""
+        return key in self._secrets
+
+
+def get_code_project_uuid(code_id):
+    """Get the project_uuid for a given code_id from PostgreSQL"""
+    if not pg_conn:
+        print("Warning: PostgreSQL connection not available, cannot fetch project_uuid")
+        return None
+    
+    try:
+        cursor = pg_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute(
+            "SELECT project_uuid FROM codes WHERE id = %s",
+            (code_id,)
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        
+        if row:
+            return row['project_uuid']
+        else:
+            print(f"Warning: Code with id '{code_id}' not found")
+            return None
+    except Exception as e:
+        print(f"Error fetching project_uuid: {e}")
+        return None
+
+
+def get_project_secrets(project_uuid):
+    """Get all secrets for a project from PostgreSQL"""
+    if not pg_conn:
+        print("Warning: PostgreSQL connection not available, cannot fetch secrets")
+        return {}
+    
+    if not project_uuid:
+        return {}
+    
+    try:
+        cursor = pg_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute(
+            "SELECT name, value FROM secrets WHERE project_uuid = %s",
+            (project_uuid,)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        
+        # Convert to dictionary {name: value}
+        secrets_dict = {row['name']: row['value'] for row in rows}
+        
+        if secrets_dict:
+            print(f"Loaded {len(secrets_dict)} secrets for project {project_uuid}")
+        
+        return secrets_dict
+    except Exception as e:
+        print(f"Error fetching secrets: {e}")
+        return {}
+
+
 class Header:
     def __init__(self, header={}):
         self._header = header
@@ -288,13 +371,14 @@ class Request:
         self.log = log
 
 class Engine:
-    def __init__(self, params=Params({}), body="", result=Result(""), log=Log(), header=Header({}), request=Request()):
+    def __init__(self, params=Params({}), body="", result=Result(""), log=Log(), header=Header({}), request=Request(), secrets=Secrets({})):
         self.params = params
         self.body = body
         self.result = result
         self.log = log
         self.request = request
         self.header = header
+        self.secrets = secrets
 
 
 
@@ -324,6 +408,11 @@ def main():
     run_id = args.run.strip()
     code_id = args.codeid.strip()
 
+    # Load project secrets
+    project_uuid = get_code_project_uuid(code_id)
+    secrets_dict = get_project_secrets(project_uuid)
+    secrets = Secrets(secrets_dict)
+
     header = Header(header_dict)
     params = Params(params_dict)
     result = Result(runId=run_id, pg_conn=pg_conn)
@@ -337,6 +426,7 @@ def main():
         log=log,
         header=header,
         request=request,
+        secrets=secrets,
     )
     try:
         action.Run(engine)
