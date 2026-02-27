@@ -22,6 +22,12 @@ import (
 
 var resourceConfig *specs.LinuxResources
 
+// enginesBasePath is the base directory where engine files (e.g. engines/py/main.py) live.
+// Defaults to "." (the process working directory) so it works automatically when the
+// server is started from the project root, both locally and in production (/app).
+// Override with FLOWS_CODE_ACTIONS_ENGINES_PATH if needed.
+var enginesBasePath = "."
+
 type Service struct {
 	codeRun *coderun.Service
 	codeLog *codelog.Service
@@ -78,6 +84,13 @@ func (s *Service) RunCode(ctx context.Context, codeID string, code string, langu
 var environment = ""
 
 func init() {
+	enginesBasePath = config.Getenv("FLOWS_CODE_ACTIONS_ENGINES_PATH", "")
+	if enginesBasePath == "" {
+		enginesBasePath, _ = os.Getwd()
+		// back two directories
+		enginesBasePath = filepath.Join(enginesBasePath, "..", "..")
+	}
+	log.Println("enginesBasePath: ", enginesBasePath)
 	environment = config.Getenv("FLOWS_CODE_ACTIONS_ENVIRONMENT", "local")
 }
 
@@ -89,12 +102,12 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 	}
 	defer os.RemoveAll(tempDir)
 
-	//TODO: figure out how to handle temporary files dir
-	currentDir := "/home/rafaelsoares/weni/weni-ai/codeactions"
+	currentDir := enginesBasePath
+	log.Println("currentDir: ", currentDir)
 	if environment != "local" {
 		currentDir = "/app"
 	}
-	sourceFile := currentDir + "/engines/py/main.py"
+	sourceFile := filepath.Join(currentDir, "engines/py/main.py")
 	destinatinFile := tempDir + "/main.py"
 	data, err := os.ReadFile(sourceFile)
 	if err != nil {
@@ -153,10 +166,10 @@ func (s *Service) runPython(ctx context.Context, codeID string, coderunID string
 			cmd = exec.Command("python", tempDir+"/main.py", idRunArg, idCodeArg, headerArg)
 		}
 	}
-	
+
 	// Pass environment variables to Python process
 	cmd.Env = os.Environ()
-	
+
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
