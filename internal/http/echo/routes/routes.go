@@ -26,8 +26,6 @@ import (
 	s "github.com/weni-ai/flows-code-actions/internal/http/echo"
 	"github.com/weni-ai/flows-code-actions/internal/http/echo/handlers"
 	"github.com/weni-ai/flows-code-actions/internal/permission"
-	"github.com/weni-ai/flows-code-actions/internal/secrets"
-	secretsRepoPG "github.com/weni-ai/flows-code-actions/internal/secrets/pg"
 	"github.com/weni-ai/flows-code-actions/internal/workerpool"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -44,7 +42,6 @@ func Setup(server *s.Server) {
 	var codelibRepo codelib.Repository
 	var coderunRepo coderun.Repository
 	var codelogRepo codelog.Repository
-	var secretsRepo secrets.Repository
 
 	if server.Config.DB.Type == "postgres" {
 		// Use PostgreSQL repositories
@@ -52,7 +49,6 @@ func Setup(server *s.Server) {
 		codeRepo = codeRepoPG.NewCodeRepository(pgDB)
 		codelibRepo = codelibRepoPG.NewCodeLibRepo(pgDB)
 		coderunRepo = coderunRepoPG.NewCodeRunRepository(pgDB)
-		secretsRepo = secretsRepoPG.NewSecretRepository(pgDB)
 	} else {
 		// Use MongoDB repositories (default)
 		mongoDB := server.DB
@@ -64,13 +60,6 @@ func Setup(server *s.Server) {
 
 	codeService := code.NewCodeService(server.Config, codeRepo, codelibRepo)
 	codeHandler := handlers.NewCodeHandler(codeService)
-
-	// Setup secrets service and handler (only for PostgreSQL)
-	var secretHandler *handlers.SecretHandler
-	if server.Config.DB.Type == "postgres" && secretsRepo != nil {
-		secretService := secrets.NewSecretService(secretsRepo)
-		secretHandler = handlers.NewSecretHandler(secretService)
-	}
 
 	coderunService := coderun.NewCodeRunService(coderunRepo)
 	coderunHandler := handlers.NewCodeRunHandler(coderunService)
@@ -141,15 +130,6 @@ func Setup(server *s.Server) {
 
 	server.Echo.GET("/codelog/:id", handlers.ProtectEndpointWithAuthToken(server.Config, codelogHandler.Get, permission.ReadPermission))
 	server.Echo.GET("/codelog", handlers.ProtectEndpointWithAuthToken(server.Config, codelogHandler.Find, permission.ReadPermission))
-
-	// Secret routes (only available when using PostgreSQL)
-	if secretHandler != nil {
-		server.Echo.POST("/secret", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.CreateSecret, permission.WritePermission))
-		server.Echo.GET("/secret", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.FindSecretsByProjectUUID, permission.ReadPermission))
-		server.Echo.GET("/secret/:id", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.GetSecret, permission.ReadPermission))
-		server.Echo.PATCH("/secret/:id", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.UpdateSecret, permission.WritePermission))
-		server.Echo.DELETE("/secret/:id", handlers.ProtectEndpointWithAuthToken(server.Config, secretHandler.DeleteSecret, permission.WritePermission))
-	}
 
 	server.Echo.POST("/run/:code_id", handlers.RequireAuthToken(server.Config, coderunnerHandler.RunCode))
 	server.Echo.Any("/endpoint/:code_id", coderunnerHandler.RunEndpoint)
