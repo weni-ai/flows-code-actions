@@ -68,6 +68,10 @@ func (h *CodeLogHandler) Find(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 		codeID = codeRun.CodeID
+		// if codeRun is from MongoDB, use the MongoDB ObjectID for compatibility
+		if codeRun.CodeMongoID != "" {
+			codeID = codeRun.CodeMongoID
+		}
 	}
 
 	if qpage == "" {
