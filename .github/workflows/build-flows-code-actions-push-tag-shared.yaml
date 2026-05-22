@@ -33,7 +33,7 @@ jobs:
       - setup
     with:
       image_repository: flows-code-actions
-      dockerfile: "docker/Dockerfile"
+      dockerfile: "Dockerfile"
       target_repository: weni-ai/kubernetes-manifests-platform
       target_application: weni-flows/flows-code-actions
       target_patch_file: deployment.json
